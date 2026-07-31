@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Federal Police - Service Categories & Sub-services</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Noto+Sans+Ethiopic:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Montserrat', 'Noto Sans Ethiopic', sans-serif;
+            background: radial-gradient(circle at center, #172554, #0f172a, #020617);
+            min-height: 100vh;
+            overflow-x: hidden;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+            padding: 24px;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.94);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(251, 191, 36, 0.35);
+            box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.98);
+            transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .service-card {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.98));
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .service-card:hover {
+            transform: translateY(-6px) scale(1.02);
+            border-color: #fbbf24;
+            box-shadow: 0 20px 35px -10px rgba(251, 191, 36, 0.4);
+            background: linear-gradient(145deg, rgba(30, 58, 138, 0.9), rgba(15, 23, 42, 0.99));
+        }
+
+        .sub-service-grid-item {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.98));
+            border: 1px solid rgba(251, 191, 36, 0.25);
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.8s cubic-bezier(0.16, 1, 0.3, 1), background 0.8s ease, border-color 0.8s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: visible;
+            z-index: 1;
+        }
+
+        .sub-service-grid-item:hover {
+            transform: translateY(-8px) scale(1.04);
+            z-index: 50;
+            border-color: #fbbf24;
+            box-shadow: 0 25px 50px -10px rgba(251, 191, 36, 0.5), 0 0 20px rgba(37, 99, 235, 0.6);
+            background: linear-gradient(145deg, rgba(37, 99, 235, 0.5), rgba(15, 23, 42, 0.99));
+        }
+
+        .page-transition {
+            opacity: 0;
+            transform: translateY(40px) scale(0.97);
+            transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .page-transition.active {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .star-glow {
+            animation: pulseGlow 3s infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { text-shadow: 0 0 12px rgba(251, 191, 36, 0.6); }
+            50% { text-shadow: 0 0 30px rgba(251, 191, 36, 1); }
+        }
+
+        .voice-btn {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            color: #fbbf24;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .voice-btn:hover {
+            background: rgba(251, 191, 36, 0.25);
+            border-color: #fbbf24;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="page-transition" id="body-wrapper">
+
+    <!-- Header Section -->
+    <div class="text-center mt-2">
+        <h1 id="main-brand-title" class="text-2xl md:text-3xl font-extrabold tracking-wider text-amber-400 mb-1">
+            Ethiopian Federal Police
+        </h1>
+        <p id="exp-title" class="text-lg md:text-xl font-semibold text-gray-200 mb-2">
+            How was your experience today?
+        </p>
+        <div class="text-amber-400 text-2xl space-x-1 star-glow">
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+        </div>
+    </div>
+
+    <!-- Main Content Panel -->
+    <div class="glass-panel p-6 md:p-8 rounded-3xl w-full max-w-4xl my-4">
+        
+        <!-- Main Categories View -->
+        <div id="main-categories-view" class="transition-all duration-700">
+            <h2 id="choose-service-title" class="text-xl md:text-2xl font-bold mb-6 text-center text-amber-300 tracking-wide">
+                Please choose the service category
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div onclick="showSubServices('clearance')" class="service-card p-4 rounded-2xl flex items-center space-x-4 group">
+                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-400 text-xl group-hover:bg-amber-400 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
+                        <i class="fa-solid fa-file-shield"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 id="cat-1" class="text-base font-bold text-white group-hover:text-amber-300 transition-colors">Police Clearance</h3>
+                        <p id="desc-1" class="text-xs text-gray-400 mt-0.5">Criminal record & background checks</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-500 group-hover:text-amber-400 transition-transform duration-600 group-hover:translate-x-1"></i>
+                </div>
+
+                <div onclick="showSubServices('complaint')" class="service-card p-4 rounded-2xl flex items-center space-x-4 group">
+                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-400 text-xl group-hover:bg-amber-400 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 id="cat-2" class="text-base font-bold text-white group-hover:text-amber-300 transition-colors">Complaint</h3>
+                        <p id="desc-2" class="text-xs text-gray-400 mt-0.5">Submit and track formal complaints</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-500 group-hover:text-amber-400 transition-transform duration-600 group-hover:translate-x-1"></i>
+                </div>
+
+                <div onclick="showSubServices('hospital')" class="service-card p-4 rounded-2xl flex items-center space-x-4 group">
+                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-400 text-xl group-hover:bg-amber-400 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
+                        <i class="fa-solid fa-hospital-user"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 id="cat-3" class="text-base font-bold text-white group-hover:text-amber-300 transition-colors">Hospital</h3>
+                        <p id="desc-3" class="text-xs text-gray-400 mt-0.5">Police medical & health coordination</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-500 group-hover:text-amber-400 transition-transform duration-600 group-hover:translate-x-1"></i>
+                </div>
+
+                <div onclick="showSubServices('logistics')" class="service-card p-4 rounded-2xl flex items-center space-x-4 group">
+                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-400 text-xl group-hover:bg-amber-400 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
+                        <i class="fa-solid fa-truck-fast"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 id="cat-4" class="text-base font-bold text-white group-hover:text-amber-300 transition-colors">Logistics</h3>
+                        <p id="desc-4" class="text-xs text-gray-400 mt-0.5">Vehicle, garage & equipment supply</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-500 group-hover:text-amber-400 transition-transform duration-600 group-hover:translate-x-1"></i>
+                </div>
+
+                <div onclick="showSubServices('education')" class="service-card p-4 rounded-2xl flex items-center space-x-4 group">
+                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-400 text-xl group-hover:bg-amber-400 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 id="cat-5" class="text-base font-bold text-white group-hover:text-amber-300 transition-colors">Education & Training</h3>
+                        <p id="desc-5" class="text-xs text-gray-400 mt-0.5">Academy registration & certificates</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-500 group-hover:text-amber-400 transition-transform duration-600 group-hover:translate-x-1"></i>
+                </div>
+
+                <div onclick="showSubServices('other')" class="service-card p-4 rounded-2xl flex items-center space-x-4 group">
+                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-400 text-xl group-hover:bg-amber-400 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
+                        <i class="fa-solid fa-circle-plus"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 id="cat-6" class="text-base font-bold text-white group-hover:text-amber-300 transition-colors">Other</h3>
+                        <p id="desc-6" class="text-xs text-gray-400 mt-0.5">Reception, ICT, HR, Finance & Admin</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-500 group-hover:text-amber-400 transition-transform duration-600 group-hover:translate-x-1"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sub-Services View -->
+        <div id="sub-services-view" class="hidden opacity-0 transform translate-x-16 transition-all duration-700 ease-out">
+            <div class="flex items-center justify-between mb-5 border-b border-blue-800/50 pb-3">
+                <button onclick="backToCategories()" class="bg-blue-900/70 hover:bg-blue-800 text-amber-300 px-4 py-2 rounded-xl border border-amber-400/40 transition-all duration-500 flex items-center space-x-2 text-xs font-semibold shadow-md hover:scale-105">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span id="back-cat-btn">Back to Categories</span>
+                </button>
+                <h3 id="sub-category-heading" class="text-lg md:text-xl font-extrabold text-amber-400 tracking-wide">Sub-Services</h3>
+            </div>
+
+            <div id="sub-services-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            </div>
+        </div>
+
+        <!-- Integrated Audio Assistance / Voice Guide Section -->
+        <div class="mt-8 pt-5 border-t border-slate-800/80 bg-slate-900/60 p-4 rounded-2xl">
+            <p class="text-[11px] text-amber-300 font-bold uppercase tracking-wider text-center mb-3">Audio Assistance / የድምጽ እርዳታ</p>
+            <div class="flex flex-wrap items-center justify-center gap-2 voice-guide-container">
+                <button onclick="playVoiceGuide('Please choose the service category you would like to evaluate.', 'en')" class="voice-btn">
+                    🔊 English Guide
+                </button>
+                <button onclick="playVoiceGuide('እባክዎ መገምገም የሚፈልጉትን የአገልግሎት ዓይነት ይምረጡ።', 'am')" class="voice-btn">
+                    🔊 አማርኛ መመሪያ
+                </button>
+                <button onclick="playVoiceGuide('Maaloo tajaajila gamaaggamuu barbaaddan filadhaa.', 'om')" class="voice-btn">
+                    🔊 Oromoo Qajeelfama
+                </button>
+                <button onclick="playVoiceGuide('ክብሮም ክትግምግምዎ ዝደልዩዎ ዓይነቲ ኣገልግሎት ሕረዩ።', 'ti')" class="voice-btn">
+                    🔊 ትግርኛ መምርሒ
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer Controls -->
+    <div class="w-full max-w-4xl flex justify-between items-center px-2">
+        <button onclick="goBack()" class="bg-slate-800 hover:bg-slate-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl border border-slate-600 transition-all duration-500 flex items-center space-x-2 shadow-md hover:scale-105 text-sm">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span id="back-btn">Back</span>
+        </button>
+        <div class="text-xs text-gray-400 tracking-wider uppercase font-medium">
+            Federal Police Kiosk v4.5 - Screen Pop Motion Edition
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                document.getElementById('body-wrapper').classList.add('active');
+            }, 150);
+        });
+
+        const currentLang = "{{ lang }}" || "en";
+
+        const translations = {
+            en: {
+                brand: "Ethiopian Federal Police",
+                expTitle: "How was your experience today?",
+                chooseService: "Please choose the service category",
+                backCat: "Back to Categories",
+                back: "Back",
+                subHint: "Click to proceed with your rating",
+                c1: "Police Clearance", d1: "Criminal record & background checks",
+                c2: "Complaint", d2: "Submit and track formal complaints",
+                c3: "Hospital", d3: "Police medical & health coordination",
+                c4: "Logistics", d4: "Vehicle, garage & equipment supply",
+                c5: "Education & Training", d5: "Academy registration & certificates",
+                c6: "Other", d6: "Reception, ICT, HR, Finance & Admin"
+            },
+            am: {
+                brand: "የኢትዮጵያ ፌዴራል ፖሊስ",
+                expTitle: "ዛሬ የነበረዎት ቆይታ እንዴት ነበር?",
+                chooseService: "እባክዎ የሚፈልጉትን ዋና አገልግሎት ይምረጡ",
+                backCat: "ወደ ዋናው ምድብ ተመለስ",
+                back: "ተመለስ",
+                subHint: "አስተያየት ለመስጠት እባክዎ ይጫኑ",
+                c1: "የፖሊስ ማጽለያ", d1: "የወንጀል ታሪክ ማጣሪያ እና ማስረጃ",
+                c2: "ቅሬታ", d2: "ቅሬታዎችን ማቅረብ እና መከታተል",
+                c3: "ሆስፒታል", d3: "የህክምና እና ጤና ማስተባበሪያ",
+                c4: "ሎጂስቲክስ", d4: "ትራንስፖርት፣ ጋራጅ እና እቃዎች አቅርቦት",
+                c5: "ትምህርት እና ስልጠና", d5: "የአካዳሚ ምዝገባ እና ሰርተፍኬት",
+                c6: "ሌሎች ክፍሎች", d6: "ሬስፔሽን፣ አይሲቲ፣ የሰው ሀብት እና ፋይናንስ"
+            },
+            om: {
+                brand: "Poolisii Federaalaa Itoophiyaa",
+                expTitle: "Har'a turtii akkam qabdan turte?",
+                chooseService: "Mee gita tajaajilaa barbaaddan filadhaa",
+                backCat: "Gara Gittichaatti Deebi'i",
+                back: "Duubatti Deebi'i",
+                subHint: "Yaada kennuuf tuqaa",
+                c1: "Ragaa Qulqullina Poolisii", d1: "Sakatta'insa seenaa yakkaa fi ragaa",
+                c2: "Komii", d2: "Komii dhiyeeffachuu fi hordofuu",
+                c3: "Hospitaala", d3: "Qindoomina fayyaa fi wal'اansa",
+                c4: "Lojistiiksii", d4: "Geejjibaa, gaarajii fi dhiyeessii meeshaalee",
+                c5: "Barnootaa fi Leenjii", d5: "Galmee akkaadaamii fi ragaalee",
+                c6: "Kan biroo", d6: "Fuuldha simannaa, ICT, HR fi Fayinaansi"
+            },
+            ti: {
+                brand: "ፌዴራል ፖሊስ ኢትዮጵያ",
+                expTitle: "ሎሚ ዝነበረካ ፃንሒት ከመይ ነይሩ?",
+                chooseService: "ብኽብሪ ዝደለኹዎ ዋና ኣገልግሎት ሕረዩ",
+                backCat: "ናብ ዝነበሮ ተመለስ",
+                back: "ንድሕሪት",
+                subHint: "ርእይቶ ንምሃብ ክሊክ ግበሩ",
+                c1: "መጽረዪ ፖሊስ", d1: "ታሪኽ ገበን መርመራን መረጋገጽን",
+                c2: "ቅሬታ", d2: "ቅሬታታት ምቕራብን ምክትታልን",
+                c3: "ሆስፒታል", d3: "ሕክምናን ጥዕናን ምውህሃድ",
+                c4: "ሎጂስቲክስ", d4: "ትራንስፖርትን ጋራዥን ናውትን",
+                c5: "ትምህርትን ስልጠናን", d5: "ምዝገባ ኣካዳሚን ሰርተፍኬትን",
+                c6: "ካልኦት ክፍሊታት", d6: "ሬሴፕሽን፣ ሓገዝ ICT፣ HRን ፋይናንስን"
+            }
+        };
+
+        const departmentsData = {
+            clearance: {
+                title: { en: "Police Clearance", am: "የፖሊስ ማጽለያ", om: "Ragaa Qulqullina Poolisii", ti: "መጽረዪ ፖሊስ" },
+                items: [
+                    { id: "new_clearance", icon: "fa-file-circle-plus", name: { en: "New Police Clearance", am: "አዲስ የፖሊስ ማጽለያ", om: "Ragaa Qulqullinaa Haaraa", ti: "ሓድሽ መጽረዪ ፖሊስ" } },
+                    { id: "renewal", icon: "fa-rotate", name: { en: "Renewal", am: "እድሳት / ማደስ", om: "Haaromsuu", ti: "ሕድሳት" } },
+                    { id: "criminal_record", icon: "fa-user-shield", name: { en: "Criminal Record Verification", am: "የወንጀል ታሪክ ማጣሪያ", om: "Sakatta'insa Seenaa Yakkaa", ti: "መረጋገጺ ታሪኽ ገበን" } },
+                    { id: "fingerprint", icon: "fa-fingerprint", name: { en: "Fingerprint Registration", am: "የጣት አሻራ ምዝገባ", om: "Galmee Qubee Gubbaa", ti: "ምዝገባ ኣጻብዕ" } },
+                    { id: "document_collection", icon: "fa-folder-open", name: { en: "Document Collection", am: "ሰነድ መሰብሰቢያ / ማውረጃ", om: "Funaaninsa Galmee", ti: "እክክ ሰነድ" } }
+                ]
+            },
+            complaint: {
+                title: { en: "Complaint", am: "ቅሬታ", om: "Komii", ti: "ቅሬታ" },
+                items: [
+                    { id: "crime_complaint", icon: "fa-file-lines", name: { en: "Crime Complaint Registration", am: "የወንጀል ቅሬታ ምዝገባ", om: "Galmee Komii Yakkaa", ti: "ምዝገባ ቅሬታ ገበን" } },
+                    { id: "public_office", icon: "fa-building-user", name: { en: "Public Complaint Office", am: "የህዝብ ቅሬታ ቢሮ", om: "Waajjira Komii Uummataa", ti: "ቤት ጽሕፈት ቅሬታ ህዝቢ" } },
+                    { id: "online_followup", icon: "fa-laptop-code", name: { en: "Online Complaint Follow-up", am: "የኦንላይን ቅሬታ ክትትል", om: "Hordofii Komii Intarneetiin", ti: "ክትትል ቅሬታ ኦንላይን" } },
+                    { id: "investigation", icon: "fa-magnifying-glass-chart", name: { en: "Investigation", am: "ምርመራ ክፍል", om: "Qorannoo", ti: "መርመራ" } },
+                    { id: "resolution", icon: "fa-circle-check", name: { en: "Resolution", am: "ውሳኔ እና መፍትሄ", om: "Furmaata", ti: "ውሳኔን ፍታሕን" } }
+                ]
+            },
+            hospital: {
+                title: { en: "Hospital", am: "ሆስፒታል", om: "Hospitaala", ti: "ሆስፒታል" },
+                items: [
+                    { id: "opd", icon: "fa-user-doctor", name: { en: "OPD", am: "ውጪ ህሙማን ክፍል (OPD)", om: "Kutaalee Dhukkubsattoota Alaa", ti: "OPD (ክፍሊ ሕክምና ወጻኢ)" } },
+                    { id: "emergency", icon: "fa-truck-medical", name: { en: "Emergency", am: "ድንገተኛ አደጋ (Emergency)", om: "Tajaajila Hatattamaa", ti: "ህጹጽ እዋን (Emergency)" } },
+                    { id: "pharmacy", icon: "fa-pills", name: { en: "Pharmacy", am: "ፋርማሲ / መድኃኒት ቤት", om: "Faarmasii", ti: "ፋርማሲ" } },
+                    { id: "laboratory", icon: "fa-flask", name: { en: "Laboratory", am: "ላቦራቶሪ ምርመራ", om: "Laaboratoarii", ti: "ላቦራቶሪ" } },
+                    { id: "medical_exam", icon: "fa-stethoscope", name: { en: "Medical Examination", am: "የህክምና ምርመራ", om: "Qorannoo Fayyaa", ti: "ሕክምናዊ መርመራ" } }
+                ]
+            },
+            logistics: {
+                title: { en: "Logistics", am: "ሎጂስቲክስ", om: "Lojistiiksii", ti: "ሎጂስቲክስ" },
+                items: [
+                    { id: "vehicle_mgmt", icon: "fa-car-side", name: { en: "Vehicle Management", am: "የተሽከርካሪ አስተዳደር", om: "Bulchiinsa Konkolaataa", ti: "ምሕደራ ተሽከርካሪ" } },
+                    { id: "garage", icon: "fa-screwdriver-wrench", name: { en: "Garage", am: "ጋራጅ / ጥገና ክፍል", om: "Gaarajii fi Suphaa", ti: "ጋራዥን ጽገናን" } },
+                    { id: "equipment_dist", icon: "fa-boxes-packing", name: { en: "Equipment Distribution", am: "እቃዎች ስርጭት", om: "Qoodinsa Meeshaalee", ti: "ዕቃ ማከፋፈፊያ" } },
+                    { id: "inventory", icon: "fa-warehouse", name: { en: "Inventory", am: "ግምጃ ቤት / ኢንቬንቶሪ", om: "Inveentarii", ti: "ኢንቬንቶሪ" } },
+                    { id: "procurement", icon: "fa-file-invoice-dollar", name: { en: "Procurement", am: "ግዥ ክፍል", om: "Bittaa Meeshaalee", ti: "ዕዳጋን ግዥን" } }
+                ]
+            },
+            education: {
+                title: { en: "Education & Training", am: "ትምህርት እና ስልጠና", om: "Barnootaa fi Leenjii", ti: "ትምህርትን ስልጠናን" },
+                items: [
+                    { id: "student_reg", icon: "fa-user-plus", name: { en: "Student Registration", am: "ተማሪዎች ምዝገባ", om: "Galmee Barattootaa", ti: "ምዝገባ ተማሃሮ" } },
+                    { id: "training", icon: "fa-chalkboard-user", name: { en: "Training", am: "ስልጠናዎች", om: "Leenjiiwwan Addaa", ti: "ስልጠናታት" } },
+                    { id: "certificates", icon: "fa-award", name: { en: "Certificates", am: "ሰርተፍኬት / ምስክር ወረቀት", om: "Waraqaa Ragaa", ti: "ሰርተፍኬት" } },
+                    { id: "examination", icon: "fa-pen-to-square", name: { en: "Examination", am: "ፈተናዎች ክፍል", om: "Qormaata", ti: "ፈተና" } },
+                    { id: "academic_records", icon: "fa-book-bookmark", name: { en: "Academic Records", am: "የትምህርት መዛግብት", om: "Galmee Barnootaa", ti: "መዛግብቲ ትምህርቲ" } }
+                ]
+            },
+            other: {
+                title: { en: "Other Departments", am: "ሌሎች ክፍሎች", om: "Kutaalee Biroo", ti: "ካልኦት ክፍሊታት" },
+                items: [
+                    { id: "reception", icon: "fa-headset", name: { en: "Reception", am: "ሬስፔሽን / እንግዶች መቀበያ", om: "Fuuldha Simannaa", ti: "ሬሴፕሽን" } },
+                    { id: "ict_support", icon: "fa-network-wired", name: { en: "ICT Support", am: "አይሲቲ ድጋፍ", om: "Deeggarsa ICT", ti: "ሓገዝ ICT" } },
+                    { id: "hr", icon: "fa-users-gear", name: { en: "HR", am: "የሰው ሀብት አስተዳደር (HR)", om: "Humna Namaa (HR)", ti: "ዕዮ ሰብ (HR)" } },
+                    { id: "finance", icon: "fa-wallet", name: { en: "Finance", am: "ፋይናንስ ክፍል", om: "Faayinii", ti: "ፋይናንስ" } },
+                    { id: "admin", icon: "fa-building-shield", name: { en: "Administration", am: "አስተዳደር", om: "Bulchiinsa Waliigalaa", ti: "ምሕደራ" } }
+                ]
+            }
+        };
+
+        const t = translations[currentLang] || translations['en'];
+        
+        document.getElementById('main-brand-title').innerText = t.brand;
+        document.getElementById('exp-title').innerText = t.expTitle;
+        document.getElementById('choose-service-title').innerText = t.chooseService;
+        document.getElementById('back-cat-btn').innerText = t.backCat;
+        document.getElementById('back-btn').innerText = t.back;
+
+        for (let i = 1; i <= 6; i++) {
+            document.getElementById(`cat-${i}`).innerText = t[`c${i}`];
+            document.getElementById(`desc-${i}`).innerText = t[`d${i}`];
+        }
+
+        function showSubServices(categoryKey) {
+            const catData = departmentsData[categoryKey];
+            if (!catData) return;
+
+            let headingText = catData.title[currentLang] || catData.title['en'];
+            document.getElementById('sub-category-heading').innerText = headingText;
+
+            const container = document.getElementById('sub-services-container');
+            container.innerHTML = "";
+
+            catData.items.forEach((sub, index) => {
+                let subName = sub.name[currentLang] || sub.name['en'];
+                
+                const card = document.createElement('div');
+                card.className = "sub-service-grid-item p-4 rounded-2xl flex items-center space-x-4 group opacity-0 transform translate-x-10 transition-all duration-700 ease-out";
+                card.style.transitionDelay = `${index * 100}ms`;
+                card.onclick = () => selectSubService(categoryKey, sub.id);
+                
+                card.innerHTML = `
+                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-400 text-xl group-hover:bg-amber-400 group-hover:text-slate-900 transition-all duration-500 shadow-inner flex-shrink-0">
+                        <i class="fa-solid ${sub.icon}"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="text-base font-bold text-white group-hover:text-amber-300 transition-colors tracking-wide">${subName}</h4>
+                        <p class="text-xs text-gray-400 mt-0.5">${t.subHint}</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-500 group-hover:text-amber-400 transition-transform duration-500 group-hover:translate-x-1"></i>
+                `;
+                container.appendChild(card);
+            });
+
+            const mainView = document.getElementById('main-categories-view');
+            const subView = document.getElementById('sub-services-view');
+
+            mainView.style.opacity = '0';
+            mainView.style.transform = 'translateX(-30px)';
+            
+            setTimeout(() => {
+                mainView.classList.add('hidden');
+                subView.classList.remove('hidden');
+                void subView.offsetWidth; 
+                subView.style.opacity = '1';
+                subView.style.transform = 'translateX(0)';
+
+                setTimeout(() => {
+                    const items = container.querySelectorAll('.sub-service-grid-item');
+                    items.forEach(el => {
+                        el.style.opacity = '1';
+                        el.style.transform = 'translateX(0)';
+                    });
+                }, 80);
+            }, 500);
+        }
+
+        function backToCategories() {
+            const mainView = document.getElementById('main-categories-view');
+            const subView = document.getElementById('sub-services-view');
+
+            subView.style.opacity = '0';
+            subView.style.transform = 'translateX(30px)';
+
+            setTimeout(() => {
+                subView.classList.add('hidden');
+                mainView.classList.remove('hidden');
+                void mainView.offsetWidth;
+                mainView.style.opacity = '1';
+                mainView.style.transform = 'translateX(0)';
+            }, 500);
+        }
+
+        function selectSubService(category, subServiceId) {
+            document.getElementById('body-wrapper').style.opacity = '0';
+            document.getElementById('body-wrapper').style.transform = 'scale(1.03)';
+            setTimeout(() => {
+                window.location.href = `/feedback?lang=${currentLang}&service=${category}&sub=${subServiceId}`;
+            }, 700);
+        }
+
+        function goBack() {
+            document.getElementById('body-wrapper').style.opacity = '0';
+            setTimeout(() => {
+                window.location.href = "/";
+            }, 600);
+        }
+
+        // Speech Synthesis Audio Assistance Handler
+        function playVoiceGuide(text, lang) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = lang === 'am' ? 'am-ET' : (lang === 'om' ? 'om-ET' : (lang === 'ti' ? 'ti-ET' : 'en-US'));
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert('Speech synthesis is not supported in this browser.');
+            }
+        }
+    </script>
+</body>
+</html>

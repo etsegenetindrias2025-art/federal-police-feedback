@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ethiopian Federal Police - Citizen Feedback System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@700;900&family=Montserrat:wght@500;700;800&family=Noto+Sans+Ethiopic:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Montserrat', 'Noto Sans Ethiopic', sans-serif;
+            background: radial-gradient(circle at center, #0f172a, #090d16, #020408);
+            min-height: 100vh;
+            color: white;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .glass-card {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9), 0 0 40px rgba(251, 191, 36, 0.1);
+        }
+
+        .creative-header-font {
+            font-family: 'Cinzel Decorative', 'Cinzel', serif;
+            background: linear-gradient(to bottom, #fff7ed 0%, #fbbf24 50%, #b45309 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 4px 12px rgba(251, 191, 36, 0.4));
+            letter-spacing: 1px;
+        }
+
+        .lang-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95));
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 16px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .lang-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -150%;
+            width: 150%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.25), transparent);
+            transition: 0.7s ease-in-out;
+        }
+
+        .lang-card:hover::before {
+            left: 150%;
+        }
+
+        .lang-card:hover {
+            transform: translateY(-8px) scale(1.03);
+            border-color: #fbbf24;
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(251, 191, 36, 0.18));
+            box-shadow: 0 18px 40px rgba(251, 191, 36, 0.35), 0 0 20px rgba(251, 191, 36, 0.2);
+        }
+
+        @keyframes logoGlow {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(251, 191, 36, 0.5)); transform: scale(1); }
+            50% { filter: drop-shadow(0 0 25px rgba(251, 191, 36, 0.8)); transform: scale(1.02); }
+        }
+
+        .logo-graphic {
+            animation: logoGlow 4s ease-in-out infinite;
+        }
+
+        .qr-container {
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            display: inline-block;
+        }
+
+        .voice-btn {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            color: #fbbf24;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .voice-btn:hover {
+            background: rgba(251, 191, 36, 0.25);
+            border-color: #fbbf24;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glass-card max-w-3xl w-full p-8 md:p-10 rounded-3xl shadow-2xl relative">
+        
+        <!-- Header Section -->
+        <div class="flex flex-col items-center text-center mb-8">
+            <div class="w-24 h-24 mb-3 flex items-center justify-center">
+                <img src="{{ url_for('static', filename='images/police_logo.png') }}" alt="Federal Police Logo" class="max-h-full max-w-full object-contain logo-graphic">
+            </div>
+            <h1 class="creative-header-font text-xl md:text-3xl font-black uppercase mb-1">
+                Ethiopian Federal Police
+            </h1>
+            <p class="text-xs md:text-sm text-amber-300/90 tracking-widest uppercase font-bold">
+                Citizen Feedback System
+            </p>
+        </div>
+
+        <!-- Language Selection Section -->
+        <div class="mb-8">
+            <p class="text-xs text-gray-300 font-semibold text-center mb-4 tracking-wide uppercase">
+                Please select your preferred language to begin:
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <a href="/services?lang=en" class="lang-card p-4 text-center group block border-amber-500/60 bg-amber-500/15">
+                    <span class="font-bold text-sm text-amber-300 group-hover:text-amber-400 block tracking-wide transition-transform duration-300 group-hover:scale-105">English</span>
+                    <span class="text-[11px] text-amber-400/80 font-semibold">Default Language</span>
+                </a>
+
+                <a href="/services?lang=am" class="lang-card p-4 text-center group block">
+                    <span class="font-bold text-sm text-amber-300 group-hover:text-amber-400 block tracking-wide transition-transform duration-300 group-hover:scale-105">አማርኛ</span>
+                    <span class="text-[11px] text-gray-400 font-medium">Amharic</span>
+                </a>
+
+                <a href="/services?lang=om" class="lang-card p-4 text-center group block">
+                    <span class="font-bold text-sm text-amber-300 group-hover:text-amber-400 block tracking-wide transition-transform duration-300 group-hover:scale-105">Afaan Oromoo</span>
+                    <span class="text-[11px] text-gray-400 font-medium">Oromic</span>
+                </a>
+
+                <a href="/services?lang=ti" class="lang-card p-4 text-center group block">
+                    <span class="font-bold text-sm text-amber-300 group-hover:text-amber-400 block tracking-wide transition-transform duration-300 group-hover:scale-105">ትግርኛ</span>
+                    <span class="text-[11px] text-gray-400 font-medium">Tigrigna</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Voice Guide Section -->
+        <div class="mb-8 p-4 bg-slate-900/60 border border-slate-800 rounded-2xl">
+            <p class="text-[11px] text-amber-300 font-bold uppercase tracking-wider text-center mb-3">Audio Assistance / የድምጽ እርዳታ</p>
+            <div class="flex flex-wrap items-center justify-center gap-2 voice-guide-container">
+                <button onclick="playVoiceGuide('Welcome to the Ethiopian Federal Police Citizen Feedback System. Please select your language to begin.', 'en')" class="voice-btn">
+                    🔊 English
+                </button>
+                <button onclick="playVoiceGuide('እንኳን ወደ ኢትዮጵያ وفደራል ፖሊስ የህዝብ አስተያየት መስጫ ስርዓት በደህና መጡ።', 'am')" class="voice-btn">
+                    🔊 አማርኛ
+                </button>
+                <button onclick="playVoiceGuide('Baga nagaan dhuftan Sistema yaada kennisa Poolisii Federaalaa Itoophiyaa.', 'om')" class="voice-btn">
+                    🔊 Afaan Oromoo
+                </button>
+                <button onclick="playVoiceGuide('ናብ ስርዓት ርእይቶ ህዝቢ ፌደራል ፖሊስ ኢትዮጵያ ብሰላም መጻእኩም።', 'ti')" class="voice-btn">
+                    🔊 ትግርኛ
+                </button>
+            </div>
+        </div>
+
+        <!-- QR Code Section -->
+        <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-center gap-6 shadow-inner">
+            <div class="qr-container">
+                <img src="{{ url_for('static', filename='images/police_logo.png') }}" alt="QR Code" class="w-20 h-20 object-contain">
+            </div>
+            <div class="text-center sm:text-left">
+                <h3 class="text-xs font-extrabold text-amber-300 mb-1 uppercase tracking-wider">Scan to Evaluate on Mobile</h3>
+                <p class="text-[11px] text-gray-400 leading-relaxed max-w-sm">
+                    Use your smartphone camera to quickly scan and submit your feedback directly from your mobile device.
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer Section -->
+        <div class="mt-6 pt-4 border-t border-slate-800/80 text-center text-xs text-gray-500">
+            <span>Ethiopian Federal Police © 2026</span>
+        </div>
+
+    </div>
+
+    <script>
+        // Placeholder function for text-to-speech audio guidance functionality
+        function playVoiceGuide(text, lang) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop any ongoing speech
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = lang === 'am' ? 'am-ET' : (lang === 'om' ? 'om-ET' : (lang === 'ti' ? 'ti-ET' : 'en-US'));
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert('Speech synthesis is not supported in this browser.');
+            }
+        }
+    </script>
+</body>
+</html>
