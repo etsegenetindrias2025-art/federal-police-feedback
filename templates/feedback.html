@@ -138,20 +138,30 @@
 </head>
 <body class="page-enter" id="body-content">
 
+    <!-- Federal Police Logo -->
+    <div class="flex justify-center mb-3">
+        <div class="w-16 h-16 rounded-full bg-slate-900 border-2 border-amber-400/60 flex items-center justify-center shadow-lg shadow-amber-500/10 p-1.5">
+            <img src="{{ url_for('static', filename='images/police_logo.png') }}" alt="Federal Police Logo" class="w-full h-full object-contain" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/2/2b/Emblem_of_Ethiop3.png'">
+        </div>
+    </div>
+
     <div class="text-center mb-5">
         <h1 id="hdr-title" class="text-xl md:text-2xl font-extrabold text-amber-400 mb-1 tracking-wider">የኢትዮጵያ ፌዴራል ፖሊስ</h1>
         <p id="hdr-sub" class="text-xs text-gray-300 font-medium tracking-wide">Ethiopian Federal Police Service Feedback System</p>
     </div>
 
     <div class="glass-panel p-6 md:p-10 rounded-3xl w-full max-w-4xl text-center">
-        <h2 id="main-heading" class="text-lg md:text-xl font-extrabold mb-2 text-amber-300 tracking-wide">
-            በተሰጠዎት አገልግሎት ምን ያህል ረክተዋል?
-        </h2>
-        <p id="main-desc" class="text-xs text-gray-300 mb-6 max-w-lg mx-auto leading-relaxed">
-            እባክዎ የተሰማዎትን እርካታ ከታች ከሚገኙት ስሜቶች አንዱን በመምረጥ በዝግታ ይግለጹን።
-        </p>
+        <!-- Heading Section -->
+        <div id="welcome-section" class="mb-6">
+            <h2 id="main-heading" class="text-lg md:text-xl font-extrabold mb-2 text-amber-300 tracking-wide">
+                በተሰጠዎት አገልግሎት ምን ያህል ረክተዋል?
+            </h2>
+            <p id="main-desc" class="text-xs text-gray-300 mb-6 max-w-lg mx-auto leading-relaxed">
+                እባክዎ የተሰማዎትን እርካታ ከታች ከሚገኙት ስሜቶች አንዱን በመምረጥ በዝግታ ይግለጹን።
+            </p>
+        </div>
 
-        <!-- የሬቲንግ ኢሞጂዎች -->
+        <!-- Rating Emojis -->
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             <div onclick="selectRating('1')" id="rate-1" class="rating-card drop-anim-1 p-5 rounded-2xl flex flex-col items-center justify-center space-y-2">
                 <span class="emoji text-4xl md:text-5xl">😡</span>
@@ -175,7 +185,7 @@
             </div>
         </div>
 
-        <!-- አስተያየት እና የድምጽ መቅረጫ -->
+        <!-- Comment & Voice Speech-to-Text Recorder -->
         <div class="mb-6 text-left space-y-3">
             <div>
                 <label id="lbl-comment" class="block text-xs font-semibold text-gray-300 mb-1">አስተያየትዎን በጽሁፍ ይጻፉ (አማራጭ):</label>
@@ -184,15 +194,10 @@
 
             <div class="flex items-center justify-between bg-slate-900/60 p-3 rounded-xl border border-slate-800">
                 <div class="flex items-center space-x-3">
-                    <button type="button" id="record-btn" onclick="toggleRecording()" class="bg-slate-800 hover:bg-slate-700 text-white w-9 h-9 rounded-full flex items-center justify-center border border-slate-600 transition-all">
+                    <button type="button" id="record-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl flex items-center space-x-2 border border-slate-600 transition-all text-xs">
                         <i id="mic-icon" class="fa-solid fa-microphone text-amber-400 text-sm"></i>
+                        <span id="record-status" class="font-semibold text-gray-300">ድምጽ ለመቅረጽ ማይኩን ይጫኑ</span>
                     </button>
-                    <div>
-                        <span id="record-status" class="text-xs font-semibold text-gray-300 block">ድምጽ ለመቅረጽ ማይኩን ይጫኑ</span>
-                    </div>
-                </div>
-                <div id="audio-preview-container" class="hidden">
-                    <audio id="audio-playback" controls class="h-7 w-36 md:w-44"></audio>
                 </div>
             </div>
         </div>
@@ -202,7 +207,7 @@
             <span id="alert-text" class="font-medium leading-relaxed"></span>
         </div>
 
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between mb-6">
             <button onclick="goBack()" class="bg-slate-800/90 hover:bg-slate-700 text-gray-300 font-semibold px-4 py-2 rounded-xl border border-slate-600 transition-all duration-500 flex items-center space-x-2 text-xs hover:scale-105">
                 <i class="fa-solid fa-arrow-left"></i>
                 <span id="btn-back">ወደ አገልግሎቶች ተመለስ</span>
@@ -213,18 +218,18 @@
             </button>
         </div>
 
-        <!-- Voice Guide Section -->
+        <!-- Voice Guide Section using backend gTTS route -->
         <div class="voice-guide-container">
-            <button onclick="playVoiceGuide('Please select your satisfaction rating, and write your comments below.', 'en')" class="voice-btn">
+            <button onclick="playGttsGuide('Please select your satisfaction rating, and write your comments below.', 'en')" class="voice-btn">
                 🔊 Instructions (English)
             </button>
-            <button onclick="playVoiceGuide('እባክዎ የእርካታ ደረጃ ይምረጡ፣ እና አስተያየትዎን ከታች ይጻፉ።', 'am')" class="voice-btn">
+            <button onclick="playGttsGuide('እባክዎ የእርካታ ደረጃ ይምረጡ፣ እና አስተያየትዎን ከታች ይጻፉ።', 'am')" class="voice-btn">
                 🔊 Instructions (Amharic)
             </button>
-            <button onclick="playVoiceGuide('Maaloo sadarkaa quufaa keessan filadhaa, yaada keessanis gadiitti barreessaa.', 'om')" class="voice-btn">
+            <button onclick="playGttsGuide('Maaloo sadarkaa quufaa keessan filadhaa, yaada keessanis gadiitti barreessaa.', 'om')" class="voice-btn">
                 🔊 Instructions (Afaan Oromoo)
             </button>
-            <button onclick="playVoiceGuide('ሕርያ ደረጃ ዕግበትኩም ምረጹ፣ ርእይቶኹም ድማ ኣብ ትሕቲ እቲ ጽሓፉ።', 'ti')" class="voice-btn">
+            <button onclick="playGttsGuide('ሕርያ ደረጃ ዕግበትኩም ምረጹ፣ ርእይቶኹም ድማ ኣብ ትሕቲ እቲ ጽሓፉ።', 'ti')" class="voice-btn">
                 🔊 Instructions (Tigrinya)
             </button>
         </div>
@@ -259,7 +264,6 @@
                 commentPlaceholder: "ስለተሰጠው አገልግሎትዎ ሃሳብ ወይም አስተያየት ይጻፉ...",
                 recStatus: "ድምጽ ለመቅረጽ ማይኩን ይጫኑ",
                 recActive: "ድምጽ በመቅረጽ ላይ ነው...",
-                recDone: "ድምጽዎ ተቀምጧል!",
                 btnBack: "ተመለስ",
                 btnSubmit: "አስገባና ጨርስ",
                 errRating: "እባክዎ ከመቀጠልዎ በፊት የሬቲንግ ስሜት (Rating) ይምረጡ!",
@@ -276,8 +280,7 @@
                 lblComment: "Write your comment (Optional):",
                 commentPlaceholder: "Write your thoughts or feedback about the service...",
                 recStatus: "Click mic to record voice",
-                recActive: "Recording voice...",
-                recDone: "Voice recorded!",
+                recActive: "Listening...",
                 btnBack: "Back",
                 btnSubmit: "Submit & Finish",
                 errRating: "Please select a rating before proceeding!",
@@ -307,10 +310,6 @@
         document.getElementById('success-msg-text').textContent = t.successDesc;
 
         let selectedScore = '';
-        let hasVoiceRecorded = false;
-        let isRecording = false;
-        let mediaRecorder;
-        let audioChunks = [];
 
         function selectRating(score) {
             selectedScore = score;
@@ -321,64 +320,94 @@
             document.getElementById('alert-box').classList.add('hidden');
         }
 
-        function toggleRecording() {
-            const recordBtn = document.getElementById('record-btn');
-            const micIcon = document.getElementById('mic-icon');
-            const recordStatus = document.getElementById('record-status');
-            
-            if (!isRecording) {
-                navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-                    mediaRecorder = new MediaRecorder(stream);
-                    mediaRecorder.start();
-                    audioChunks = [];
+        // Fixed Speech-to-Text Recognition Integration
+        const micBtn = document.getElementById('record-btn');
+        const micIcon = document.getElementById('mic-icon');
+        const recordStatus = document.getElementById('record-status');
+        const commentInput = document.getElementById('user-comment');
 
-                    mediaRecorder.ondataavailable = event => {
-                        audioChunks.push(event.data);
-                    };
+        if (micBtn && commentInput) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-                    mediaRecorder.onstop = () => {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                        const audioUrl = URL.createObjectURL(audioBlob);
-                        document.getElementById('audio-playback').src = audioUrl;
-                        document.getElementById('audio-preview-container').classList.remove('hidden');
-                        hasVoiceRecorded = true;
-                        document.getElementById('alert-box').classList.add('hidden');
-                    };
+            if (SpeechRecognition) {
+                const recognition = new SpeechRecognition();
+                recognition.lang = lang === 'am' ? 'am-ET' : 'en-US';
+                recognition.continuous = false;
+                recognition.interimResults = true;
 
-                    isRecording = true;
-                    recordBtn.classList.add('recording-active');
+                let finalTranscript = '';
+
+                micBtn.addEventListener('click', () => {
+                    try {
+                        finalTranscript = '';
+                        recognition.start();
+                    } catch (e) {
+                        console.log("Recognition already active", e);
+                    }
+                });
+
+                recognition.onstart = () => {
+                    recordStatus.textContent = t.recActive;
+                    micBtn.classList.add('recording-active');
                     micIcon.classList.remove('fa-microphone', 'text-amber-400');
                     micIcon.classList.add('fa-stop', 'text-white');
-                    recordStatus.textContent = t.recActive;
-                }).catch(err => {
-                    alert("Microphone permission denied or not available.");
-                });
-            } else {
-                if (mediaRecorder) {
-                    mediaRecorder.stop();
+                };
+
+                recognition.onresult = (event) => {
+                    let interim = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript;
+                        } else {
+                            interim += event.results[i][0].transcript;
+                        }
+                    }
+                    if (finalTranscript) {
+                        commentInput.value = commentInput.value ? `${commentInput.value} ${finalTranscript}` : finalTranscript;
+                    }
+                };
+
+                recognition.onerror = (event) => {
+                    console.error("Speech recognition error:", event.error);
+                    resetMicButton();
+                };
+
+                recognition.onend = () => {
+                    resetMicButton();
+                };
+
+                function resetMicButton() {
+                    recordStatus.textContent = t.recStatus;
+                    micBtn.classList.remove('recording-active');
+                    micIcon.classList.remove('fa-stop', 'text-white');
+                    micIcon.classList.add('fa-microphone', 'text-amber-400');
                 }
-                isRecording = false;
-                recordBtn.classList.remove('recording-active');
-                micIcon.classList.remove('fa-stop', 'text-white');
-                micIcon.classList.add('fa-microphone', 'text-amber-400');
-                recordStatus.textContent = t.recDone;
+            } else {
+                micBtn.style.display = 'none';
             }
         }
 
-        function playVoiceGuide(text, langCode) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = langCode === 'am' ? 'am-ET' : 
-                                 langCode === 'om' ? 'om-ET' : 
-                                 langCode === 'ti' ? 'ti-ER' : 'en-US';
-                utterance.rate = 0.9;
-                
-                window.speechSynthesis.speak(utterance);
-            } else {
-                console.warn("Text-to-speech not supported in this browser.");
-            }
+        // Backend gTTS Audio Stream Integration
+        function playGttsGuide(text, langCode) {
+            fetch('/text-to-speech', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text: text, lang: langCode })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to generate audio via gTTS');
+                return response.blob();
+            })
+            .then(blob => {
+                const audioUrl = URL.createObjectURL(blob);
+                const audio = new Audio(audioUrl);
+                audio.play();
+            })
+            .catch(err => {
+                console.error("gTTS Error:", err);
+            });
         }
 
         function validateAndSubmit() {

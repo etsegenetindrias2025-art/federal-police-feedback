@@ -3,7 +3,9 @@ import psycopg2
 import psycopg2.extras
 import os
 import io
+import qrcode
 from gtts import gTTS
+import socket
 
 app = Flask(__name__)
 app.secret_key = 'federal_police_secret_key'
@@ -127,7 +129,12 @@ def init_db():
             """, (s_key, sub_key, sub_name))
 
     cursor.execute('''
-        DO $$          BEGIN              IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='feedbacks' and column_name='is_read') THEN                 ALTER TABLE feedbacks ADD COLUMN is_read BOOLEAN DEFAULT FALSE;             END IF;         END $$;
+        DO $$ 
+        BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='feedbacks' and column_name='is_read') THEN 
+                ALTER TABLE feedbacks ADD COLUMN is_read BOOLEAN DEFAULT FALSE; 
+            END IF; 
+        END $$;
     ''')
         
     conn.commit()
@@ -165,38 +172,147 @@ def get_sub_service_map():
 
 def get_admin_credentials():
     credentials = {
-        "general_admin": {
-            "password": "supersecretpassword", 
+        "admin gen": {
+            "password": "1234", 
             "type": "general",
             "service": "all",
             "sub_service": "all",
             "title": "General Admin Dashboard (All Services & Sub-services)"
+        },
+        "admin pol": {
+            "password": "1234",
+            "type": "service",
+            "service": "police_clearance",
+            "sub_service": "all",
+            "title": "Police Clearance Department Admin"
+        },
+        "admin com": {
+            "password": "1234",
+            "type": "service",
+            "service": "complaint",
+            "sub_service": "all",
+            "title": "Complaint Department Admin"
+        },
+        "admin hos": {
+            "password": "1234",
+            "type": "service",
+            "service": "hospital",
+            "sub_service": "all",
+            "title": "Hospital Department Admin"
+        },
+        "admin log": {
+            "password": "1234",
+            "type": "service",
+            "service": "logistics",
+            "sub_service": "all",
+            "title": "Logistics Department Admin"
+        },
+        "admin edu": {
+            "password": "1234",
+            "type": "service",
+            "service": "education_training",
+            "sub_service": "all",
+            "title": "Education & Training Department Admin"
+        },
+        "admin oth": {
+            "password": "1234",
+            "type": "service",
+            "service": "other",
+            "sub_service": "all",
+            "title": "Other Department Admin"
+        },
+        # Police Clearance Sub-services
+        "admin new": {
+            "password": "1234", "type": "sub_service", "service": "police_clearance", "sub_service": "new_clearance", "title": "Sub-Service Admin: New Police Clearance"
+        },
+        "admin ren": {
+            "password": "1234", "type": "sub_service", "service": "police_clearance", "sub_service": "renewal", "title": "Sub-Service Admin: Renewal"
+        },
+        "admin cri": {
+            "password": "1234", "type": "sub_service", "service": "police_clearance", "sub_service": "criminal_record", "title": "Sub-Service Admin: Criminal Record Verification"
+        },
+        "admin fin": {
+            "password": "1234", "type": "sub_service", "service": "police_clearance", "sub_service": "fingerprint", "title": "Sub-Service Admin: Fingerprint Registration"
+        },
+        "admin doc": {
+            "password": "1234", "type": "sub_service", "service": "police_clearance", "sub_service": "document_collection", "title": "Sub-Service Admin: Document Collection"
+        },
+        # Complaint Sub-services
+        "admin pub": {
+            "password": "1234", "type": "sub_service", "service": "complaint", "sub_service": "public_office", "title": "Sub-Service Admin: Public Complaint Office"
+        },
+        "admin onl": {
+            "password": "1234", "type": "sub_service", "service": "complaint", "sub_service": "online_followup", "title": "Sub-Service Admin: Online Complaint Follow-up"
+        },
+        "admin inv": {
+            "password": "1234", "type": "sub_service", "service": "complaint", "sub_service": "investigation", "title": "Sub-Service Admin: Investigation"
+        },
+        "admin res": {
+            "password": "1234", "type": "sub_service", "service": "complaint", "sub_service": "resolution", "title": "Sub-Service Admin: Resolution"
+        },
+        # Hospital Sub-services
+        "admin opd": {
+            "password": "1234", "type": "sub_service", "service": "hospital", "sub_service": "opd", "title": "Sub-Service Admin: OPD"
+        },
+        "admin eme": {
+            "password": "1234", "type": "sub_service", "service": "hospital", "sub_service": "emergency", "title": "Sub-Service Admin: Emergency"
+        },
+        "admin pha": {
+            "password": "1234", "type": "sub_service", "service": "hospital", "sub_service": "pharmacy", "title": "Sub-Service Admin: Pharmacy"
+        },
+        "admin lab": {
+            "password": "1234", "type": "sub_service", "service": "hospital", "sub_service": "laboratory", "title": "Sub-Service Admin: Laboratory"
+        },
+        "admin med": {
+            "password": "1234", "type": "sub_service", "service": "hospital", "sub_service": "medical_exam", "title": "Sub-Service Admin: Medical Examination"
+        },
+        # Logistics Sub-services
+        "admin veh": {
+            "password": "1234", "type": "sub_service", "service": "logistics", "sub_service": "vehicle_mgmt", "title": "Sub-Service Admin: Vehicle Management"
+        },
+        "admin gar": {
+            "password": "1234", "type": "sub_service", "service": "logistics", "sub_service": "garage", "title": "Sub-Service Admin: Garage"
+        },
+        "admin equ": {
+            "password": "1234", "type": "sub_service", "service": "logistics", "sub_service": "equipment_dist", "title": "Sub-Service Admin: Equipment Distribution"
+        },
+        "admin pro": {
+            "password": "1234", "type": "sub_service", "service": "logistics", "sub_service": "procurement", "title": "Sub-Service Admin: Procurement"
+        },
+        # Education & Training Sub-services
+        "admin stu": {
+            "password": "1234", "type": "sub_service", "service": "education_training", "sub_service": "student_reg", "title": "Sub-Service Admin: Student Registration"
+        },
+        "admin tra": {
+            "password": "1234", "type": "sub_service", "service": "education_training", "sub_service": "training", "title": "Sub-Service Admin: Training"
+        },
+        "admin cer": {
+            "password": "1234", "type": "sub_service", "service": "education_training", "sub_service": "certificates", "title": "Sub-Service Admin: Certificates"
+        },
+        "admin exa": {
+            "password": "1234", "type": "sub_service", "service": "education_training", "sub_service": "examination", "title": "Sub-Service Admin: Examination"
+        },
+        "admin aca": {
+            "password": "1234", "type": "sub_service", "service": "education_training", "sub_service": "academic_records", "title": "Sub-Service Admin: Academic Records"
+        },
+        # Other Sub-services
+        "admin rec": {
+            "password": "1234", "type": "sub_service", "service": "other", "sub_service": "reception", "title": "Sub-Service Admin: Reception"
+        },
+        "admin ict": {
+            "password": "1234", "type": "sub_service", "service": "other", "sub_service": "ict_support", "title": "Sub-Service Admin: ICT Support"
+        },
+        "admin hr": {
+            "password": "1234", "type": "sub_service", "service": "other", "sub_service": "hr", "title": "Sub-Service Admin: HR"
+        },
+        "admin fnn": {
+            "password": "1234", "type": "sub_service", "service": "other", "sub_service": "finance", "title": "Sub-Service Admin: Finance"
+        },
+        "admin adm": {
+            "password": "1234", "type": "sub_service", "service": "other", "sub_service": "admin", "title": "Sub-Service Admin: Administration"
         }
     }
     
-    service_map = get_service_map()
-    sub_service_map = get_sub_service_map()
-    
-    for s_key, s_name in service_map.items():
-        credentials[f"admin_{s_key}"] = {
-            "password": f"pass_{s_key}",
-            "type": "service",
-            "service": s_key,
-            "sub_service": "all",
-            "title": f"{s_name} Department Admin"
-        }
-        
-    for s_key, sub_dict in sub_service_map.items():
-        for sub_key, sub_name in sub_dict.items():
-            admin_username = f"admin_{s_key}_{sub_key}"
-            credentials[admin_username] = {
-                "password": f"pass_{sub_key}",
-                "type": "sub_service",
-                "service": s_key,
-                "sub_service": sub_key,
-                "title": f"Sub-Service Admin: {sub_name}"
-            }
-            
     return credentials
 
 # Public Routes
@@ -243,6 +359,22 @@ def submit_feedback():
         return jsonify({"status": "success", "message": "Feedback saved successfully!"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/unread-count')
+def api_unread_count():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT COUNT(*) AS count FROM feedbacks WHERE is_read = FALSE")
+        result = cursor.fetchone()
+        unread_count = result['count'] if result else 0
+    except Exception:
+        unread_count = 0
+    finally:
+        cursor.close()
+        conn.close()
+        
+    return jsonify({"unread_count": unread_count})
 
 # Admin Authentication & Dashboard
 @app.route('/admin/login', methods=['GET', 'POST'])
@@ -579,13 +711,21 @@ def export_report(format):
             'Sub-Service': sub_service_map.get(fb['service_name'], {}).get(fb['sub_service'], fb['sub_service']),
             'Rating': fb['rating'],
             'Comment': fb['comment'],
-            'Timestamp': fb['timestamp']
+            'Timestamp': str(fb['timestamp'])
         } for fb in feedbacks]
         
         df = pd.DataFrame(data)
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='Feedback Report')
+            
+            # Auto-adjust column widths
+            worksheet = writer.sheets['Feedback Report']
+            for col in worksheet.columns:
+                max_len = max(len(str(cell.value or '')) for cell in col)
+                col_letter = col[0].column_letter
+                worksheet.column_dimensions[col_letter].width = max(max_len + 3, 12)
+                
         output.seek(0)
         
         return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -638,25 +778,55 @@ def admin_logout():
     session.pop('admin_user', None)
     return redirect(url_for('admin_login'))
 
-# Text-to-Speech Endpoint
+# Text-to-Speech Endpoint with Client-Side Fallback Support
 @app.route('/speak')
 def speak():
     text = request.args.get('text', 'Welcome')
-    lang = request.args.get('lang', 'en')
+    lang = request.args.get('lang', 'am')
     
-    lang_map = {
-        'en': 'en',
-        'am': 'am',  # Amharic
-        'om': 'en',  # Fallback
-        'ti': 'en'
-    }
-    tts_lang = lang_map.get(lang, 'en')
+    # gTTS natively supports 'am' (Amharic) and 'en' (English).
+    # For languages like Afaan Oromoo ('om') and Tigrinya ('ti') which gTTS does not have native audio profiles for,
+    # we point them safely or use a browser-native voice trigger alternative.
+    supported_gtts_langs = {'en': 'en', 'am': 'am'}
     
-    tts = gTTS(text=text, lang=tts_lang, slow=False)
-    audio_path = "temp_voice.mp3"
-    tts.save(audio_path)
+    tts_lang = supported_gtts_langs.get(lang)
     
-    return send_file(audio_path, mimetype="audio/mp3")
+    if not tts_lang:
+        # Return a special JSON status telling the frontend to use browser SpeechSynthesis instead of MP3 file download
+        return jsonify({
+            "status": "use_browser_tts", 
+            "lang": lang, 
+            "text": text
+        }), 200
+
+    try:
+        tts = gTTS(text=text, lang=tts_lang, slow=False)
+        audio_fp = io.BytesIO()
+        tts.write_to_fp(audio_fp)
+        audio_fp.seek(0)
+        
+        return send_file(
+            audio_fp, 
+            mimetype="audio/mp3", 
+            as_attachment=False, 
+            download_name="voice.mp3"
+        )
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    os.makedirs("static/images", exist_ok=True)
+    
+    try:
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname)
+    except Exception:
+        local_ip = "127.0.0.1"
+
+    app_url = f"http://{local_ip}:5000/"
+    
+    img = qrcode.make(app_url)
+    img.save("static/images/project_qr.png")
+    print(f"QR Code generated successfully for URL: {app_url}")
+
+    app.run(debug=True, host='0.0.0.0', port=5000)
