@@ -6,6 +6,7 @@ import io
 import qrcode
 from gtts import gTTS
 import socket
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = 'federal_police_secret_key'
@@ -40,6 +41,7 @@ def init_db():
             rating TEXT NOT NULL,
             comment TEXT,
             is_read BOOLEAN DEFAULT FALSE,
+            feedback_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -134,6 +136,9 @@ def init_db():
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='feedbacks' and column_name='is_read') THEN 
                 ALTER TABLE feedbacks ADD COLUMN is_read BOOLEAN DEFAULT FALSE; 
             END IF; 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='feedbacks' and column_name='feedback_date') THEN 
+                ALTER TABLE feedbacks ADD COLUMN feedback_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP; 
+            END IF;
         END $$;
     ''')
         
@@ -342,7 +347,7 @@ def submit_feedback():
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO feedbacks (service_name, sub_service, rating, comment, is_read) VALUES (%s, %s, %s, %s, FALSE)",
+            "INSERT INTO feedbacks (service_name, sub_service, rating, comment, is_read, feedback_date) VALUES (%s, %s, %s, %s, FALSE, CURRENT_TIMESTAMP)",
             (str(url_service), str(sub_service), str(rating), str(comment))
         )
         conn.commit()
@@ -368,6 +373,50 @@ def api_unread_count():
         conn.close()
         
     return jsonify({"unread_count": unread_count})
+
+# Integrated Reports Filter Route
+@app.route('/api/reports/filter', methods=['GET'])
+def filter_reports():
+    # Get parameters from request (e.g., ?year=2026&month=08&day=05)
+    day = request.args.get('day')
+    month = request.args.get('month')
+    year = request.args.get('year')
+
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    # Base query mapped to table schema
+    query = "SELECT id, feedback_date, service_name, rating, is_read FROM feedbacks WHERE 1=1"
+    params = []
+
+    if year:
+        query += " AND EXTRACT(YEAR FROM feedback_date) = %s"
+        params.append(year)
+    if month:
+        query += " AND EXTRACT(MONTH FROM feedback_date) = %s"
+        params.append(month)
+    if day:
+        query += " AND EXTRACT(DAY FROM feedback_date) = %s"
+        params.append(day)
+
+    cur.execute(query, params)
+    rows = cur.fetchall()
+    
+    cur.close()
+    conn.close()
+    
+    # Format results as JSON
+    results = []
+    for row in rows:
+        results.append({
+            "id": row['id'],
+            "date": str(row['feedback_date']),
+            "service_type": row['service_name'],
+            "rating": row['rating'],
+            "status": "Read" if row['is_read'] else "Unread"
+        })
+
+    return jsonify(results)
 
 # Admin Authentication & Dashboard
 @app.route('/admin/login', methods=['GET', 'POST'])
@@ -683,7 +732,6 @@ def export_report(format):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Changed ORDER BY timestamp ASC so that records appear from 1 to 18 chronologically
     if admin_type == 'general':
         service_filter = request.args.get('service', 'all')
         if service_filter == 'all':
@@ -702,7 +750,6 @@ def export_report(format):
     service_map = get_service_map()
     sub_service_map = get_sub_service_map()
 
-    # Mapping emojis to readable text descriptions
     rating_text_map = {
         "😍": "Very Satisfied",
         "😊": "Satisfied",
@@ -716,7 +763,6 @@ def export_report(format):
         data = []
         for index, fb in enumerate(feedbacks, start=1):
             raw_rating = str(fb['rating']).strip()
-            # Combines the emoji and its text label description, e.g., "😍 - Very Satisfied"
             mapped_rating = rating_text_map.get(raw_rating, raw_rating)
             rating_display = f"{raw_rating} ({mapped_rating})" if mapped_rating else raw_rating
 
@@ -767,58 +813,7 @@ def export_report(format):
         p.save()
         output.seek(0)
         
-        return send_file(output, mimetype='application/pdf',
-                         as_attachment=True, download_name='feedback_report.pdf')
-
-    elif format == 'word':
-        from docx import Document
-        
-        doc = Document()
-        doc.add_heading('Ethiopian Federal Police - Report', 0)
-        for index, fb in enumerate(feedbacks, start=1):
-            s_name = service_map.get(fb['service_name'], fb['service_name'])
-            sub_name = sub_service_map.get(fb['service_name'], {}).get(fb['sub_service'], fb['sub_service'])
-            raw_rating = str(fb['rating']).strip()
-            mapped_rating = rating_text_map.get(raw_rating, raw_rating)
-            doc.add_paragraph(f"ID: {index}\nService: {s_name} - Sub-Service: {sub_name}\nRating: {raw_rating} ({mapped_rating})\nComment: {fb['comment']}\nDate: {fb['timestamp']}\n---")
-            
-        output = io.BytesIO()
-        doc.save(output)
-        output.seek(0)
-        
-        return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                         as_attachment=True, download_name='feedback_report.docx')
-
-@app.route('/kiosk-qr')
-def kiosk_qr():
-    host_ip = socket.gethostbyname(socket.gethostname())
-    kiosk_url = f"http://{host_ip}:5000/"
-    
-    img = qrcode.make(kiosk_url)
-    buf = io.BytesIO()
-    img.save(buf)
-    buf.seek(0)
-    
-    return send_file(buf, mimetype='image/png')
-
-@app.route('/audio-feedback', methods=['POST'])
-def audio_feedback():
-    try:
-        data = request.get_json()
-        text = data.get('text', '')
-        lang = data.get('lang', 'am')
-        
-        if not text:
-            return jsonify({"error": "No text provided"}), 400
-            
-        tts = gTTS(text=text, lang=lang, slow=False)
-        fp = io.BytesIO()
-        tts.write_to_fp(fp)
-        fp.seek(0)
-        
-        return send_file(fp, mimetype='audio/mpeg')
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return send_file(output, mimetype='application/pdf', as_attachment=True, download_name='feedback_report.pdf')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

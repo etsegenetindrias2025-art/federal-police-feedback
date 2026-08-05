@@ -104,6 +104,7 @@
     </style>
 </head>
 <body class="page-transition" id="body-wrapper">
+    
 
     <!-- Header Section -->
     <div class="text-center mt-2">
@@ -164,6 +165,7 @@
                     </div>
                     <i class="fa-solid fa-chevron-right text-gray-500 group-hover:text-amber-400 transition-transform duration-600 group-hover:translate-x-1"></i>
                 </div>
+                
 
                 <div onclick="showSubServices('logistics')" class="service-card p-4 rounded-2xl flex items-center space-x-4 group">
                     <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-400 text-xl group-hover:bg-amber-400 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
@@ -209,10 +211,10 @@
                 </button>
                 <h3 id="sub-category-heading" class="text-lg md:text-xl font-extrabold text-amber-400 tracking-wide">Sub-Services</h3>
             </div>
-
             <div id="sub-services-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
             </div>
         </div>
+        
 
         <!-- Integrated Audio Assistance / Voice Guide Section -->
         <div class="mt-8 pt-5 border-t border-slate-800/80 bg-slate-900/60 p-4 rounded-2xl">
@@ -254,6 +256,7 @@
         });
 
         const currentLang = "{{ lang }}" || "en";
+        
 
         const translations = {
             en: {
@@ -263,12 +266,18 @@
                 backCat: "Back to Categories",
                 back: "Back",
                 subHint: "Click to proceed with your rating",
-                c1: "Police Clearance", d1: "Criminal record & background checks",
-                c2: "Complaint", d2: "Submit and track formal complaints",
-                c3: "Hospital", d3: "Police medical & health coordination",
-                c4: "Logistics", d4: "Vehicle, garage & equipment supply",
-                c5: "Education & Training", d5: "Academy registration & certificates",
-                c6: "Other", d6: "Reception, ICT, HR, Finance & Admin"
+                c1: "Police Clearance",
+                d1: "Criminal record & background checks",
+                c2: "Complaint",
+                d2: "Submit and track formal complaints",
+                c3: "Hospital",
+                d3: "Police medical & health coordination",
+                c4: "Logistics",
+                d4: "Vehicle, garage & equipment supply",
+                c5: "Education & Training",
+                d5: "Academy registration & certificates",
+                c6: "Other",
+                d6: "Reception, ICT, HR, Finance & Admin"
             },
             am: {
                 brand: "የኢትዮጵያ ፌዴራል ፖሊስ",
@@ -277,12 +286,18 @@
                 backCat: "ወደ ዋናው ምድብ ተመለስ",
                 back: "ተመለስ",
                 subHint: "አስተያየት ለመስጠት እባክዎ ይጫኑ",
-                c1: "የፖሊስ ማጽለያ", d1: "የወንጀል ታሪክ ማጣሪያ እና ማስረጃ",
-                c2: "ቅሬታ", d2: "ቅሬታዎችን ማቅረብ እና መከታተል",
-                c3: "ሆስፒታል", d3: "የህክምና እና ጤና ማስተባበሪያ",
-                c4: "ሎጂስቲክስ", d4: "ትራንስፖርት፣ ጋራጅ እና እቃዎች አቅርቦት",
-                c5: "ትምህርት እና ስልጠና", d5: "የአካዳሚ ምዝገባ እና ሰርተፍኬት",
-                c6: "ሌሎች ክፍሎች", d6: "ሬስፔሽን፣ አይሲቲ፣ የሰው ሀብት እና ፋይናንስ"
+                c1: "የፖሊስ ማጣሪያ",
+                d1: "የወንጀል ታሪክ ማጣሪያ እና ማስረጃ",
+                c2: "ቅሬታ",
+                d2: "ቅሬታዎችን ማቅረብ እና መከታተል",
+                c3: "ሆስፒታል",
+                d3: "የህክምና እና ጤና ማስተባበሪያ",
+                c4: "ሎጂስቲክስ",
+                d4: "ትራንስፖርት፣ ጋራጅ እና እቃዎች አቅርቦት",
+                c5: "ትምህርት እና ስልጠና",
+                d5: "የአካዳሚ ምዝገባ እና ሰርተፍኬት",
+                c6: "ሌሎች ክፍሎች",
+                d6: "ሬስፔሽን፣ አይሲቲ፣ የሰው ሀብት እና ፋይናንስ"
             },
             om: {
                 brand: "Poolisii Federaalaa Itoophiyaa",
@@ -291,12 +306,18 @@
                 backCat: "Gara Gittichaatti Deebi'i",
                 back: "Duubatti Deebi'i",
                 subHint: "Yaada kennuuf tuqaa",
-                c1: "Ragaa Qulqullina Poolisii", d1: "Sakatta'insa seenaa yakkaa fi ragaa",
-                c2: "Komii", d2: "Komii dhiyeeffachuu fi hordofuu",
-                c3: "Hospitaala", d3: "Qindoomina fayyaa fi wal'اansa",
-                c4: "Lojistiiksii", d4: "Geejjibaa, gaarajii fi dhiyeessii meeshaalee",
-                c5: "Barnootaa fi Leenjii", d5: "Galmee akkaadaamii fi ragaalee",
-                c6: "Kan biroo", d6: "Fuuldha simannaa, ICT, HR fi Fayinaansi"
+                c1: "Ragaa Qulqullina Poolisii",
+                d1: "Sakatta'insa seenaa yakkaa fi ragaa",
+                c2: "Komii",
+                d2: "Komii dhiyeeffachuu fi hordofuu",
+                c3: "Hospitaala",
+                d3: "Qindoomina fayyaa fi wal'اansa",
+                c4: "Lojistiiksii",
+                d4: "Geejjibaa, gaarajii fi dhiyeessii meeshaalee",
+                c5: "Barnootaa fi Leenjii",
+                d5: "Galmee akkaadaamii fi ragaalee",
+                c6: "Kan biroo",
+                d6: "Fuuldha simannaa, ICT, HR fi Fayinaansi"
             },
             ti: {
                 brand: "ፌዴራል ፖሊስ ኢትዮጵያ",
@@ -305,20 +326,27 @@
                 backCat: "ናብ ዝነበሮ ተመለስ",
                 back: "ንድሕሪት",
                 subHint: "ርእይቶ ንምሃብ ክሊክ ግበሩ",
-                c1: "መጽረዪ ፖሊስ", d1: "ታሪኽ ገበን መርመራን መረጋገጽን",
-                c2: "ቅሬታ", d2: "ቅሬታታት ምቕራብን ምክትታልን",
-                c3: "ሆስፒታል", d3: "ሕክምናን ጥዕናን ምውህሃድ",
-                c4: "ሎጂስቲክስ", d4: "ትራንስፖርትን ጋራዥን ናውትን",
-                c5: "ትምህርትን ስልጠናን", d5: "ምዝገባ ኣካዳሚን ሰርተፍኬትን",
-                c6: "ካልኦት ክፍሊታት", d6: "ሬሴፕሽን፣ ሓገዝ ICT፣ HRን ፋይናንስን"
+                c1: "መጽረዪ ፖሊስ",
+                d1: "ታሪኽ ገበን መርመራን መረጋገጽን",
+                c2: "ቅሬታ",
+                d2: "ቅሬታታት ምቕራብን ምክትታልን",
+                c3: "ሆስፒታል",
+                d3: "ሕክምናን ጥዕናን ምውህሃድ",
+                c4: "ሎጂስቲክስ",
+                d4: "ትራንስፖርትን ጋራዥን ናውትን",
+                c5: "ትምህርትን ስልጠናን",
+                d5: "ምዝገባ ኣካዳሚን ሰርተፍኬትን",
+                c6: "ካልኦት ክፍሊታት",
+                d6: "ሬሴፕሽን፣ ሓገዝ ICT፣ HRን ፋይናንስን"
             }
         };
+        
 
         const departmentsData = {
             clearance: {
-                title: { en: "Police Clearance", am: "የፖሊስ ማጽለያ", om: "Ragaa Qulqullina Poolisii", ti: "መጽረዪ ፖሊስ" },
+                title: { en: "Police Clearance", am: "የፖሊስ ማጣሪያ", om: "Ragaa Qulqullina Poolisii", ti: "መጽረዪ ፖሊስ" },
                 items: [
-                    { id: "new_clearance", icon: "fa-file-circle-plus", name: { en: "New Police Clearance", am: "አዲስ የፖሊስ ማጽለያ", om: "Ragaa Qulqullinaa Haaraa", ti: "ሓድሽ መጽረዪ ፖሊስ" } },
+                    { id: "new_clearance", icon: "fa-file-circle-plus", name: { en: "New Police Clearance", am: "አዲስ የፖሊስ ማጣሪያ", om: "Ragaa Qulqullinaa Haaraa", ti: "ሓድሽ መጽረዪ ፖሊስ" } },
                     { id: "renewal", icon: "fa-rotate", name: { en: "Renewal", am: "እድሳት / ማደስ", om: "Haaromsuu", ti: "ሕድሳት" } },
                     { id: "criminal_record", icon: "fa-user-shield", name: { en: "Criminal Record Verification", am: "የወንጀል ታሪክ ማጣሪያ", om: "Sakatta'insa Seenaa Yakkaa", ti: "መረጋገጺ ታሪኽ ገበን" } },
                     { id: "fingerprint", icon: "fa-fingerprint", name: { en: "Fingerprint Registration", am: "የጣት አሻራ ምዝገባ", om: "Galmee Qubee Gubbaa", ti: "ምዝገባ ኣጻብዕ" } },
@@ -350,12 +378,13 @@
                 items: [
                     { id: "vehicle_mgmt", icon: "fa-car-side", name: { en: "Vehicle Management", am: "የተሽከርካሪ አስተዳደር", om: "Bulchiinsa Konkolaataa", ti: "ምሕደራ ተሽከርካሪ" } },
                     { id: "garage", icon: "fa-screwdriver-wrench", name: { en: "Garage", am: "ጋራጅ / ጥገና ክፍል", om: "Gaarajii fi Suphaa", ti: "ጋራዥን ጽገናን" } },
-                    { id: "equipment_dist", icon: "fa-boxes-packing", name: { en: "Equipment Distribution", am: "እቃዎች ስርጭት", om: "Qoodinsa Meeshaalee", ti: "ዕቃ ማከፋፈፊያ" } },
+                    { id: "equipment_dist", icon: "fa-boxes-packing", name: { en: "Equipment Distribution", am: "እቃዎች ስርጭት", om: "Qoodinsa Meeshaalee", ti: "ዕቃ ማከፋፋፊያ" } },
                     { id: "inventory", icon: "fa-warehouse", name: { en: "Inventory", am: "ግምጃ ቤት / ኢንቬንቶሪ", om: "Inveentarii", ti: "ኢንቬንቶሪ" } },
                     { id: "procurement", icon: "fa-file-invoice-dollar", name: { en: "Procurement", am: "ግዥ ክፍል", om: "Bittaa Meeshaalee", ti: "ዕዳጋን ግዥን" } }
                 ]
             },
             education: {
+                
                 title: { en: "Education & Training", am: "ትምህርት እና ስልጠና", om: "Barnootaa fi Leenjii", ti: "ትምህርትን ስልጠናን" },
                 items: [
                     { id: "student_reg", icon: "fa-user-plus", name: { en: "Student Registration", am: "ተማሪዎች ምዝገባ", om: "Galmee Barattootaa", ti: "ምዝገባ ተማሃሮ" } },
@@ -378,7 +407,7 @@
         };
 
         const t = translations[currentLang] || translations['en'];
-        
+
         document.getElementById('main-brand-title').innerText = t.brand;
         document.getElementById('exp-title').innerText = t.expTitle;
         document.getElementById('choose-service-title').innerText = t.chooseService;
@@ -402,12 +431,12 @@
 
             catData.items.forEach((sub, index) => {
                 let subName = sub.name[currentLang] || sub.name['en'];
-                
                 const card = document.createElement('div');
                 card.className = "sub-service-grid-item p-4 rounded-2xl flex items-center space-x-4 group opacity-0 transform translate-x-10 transition-all duration-700 ease-out";
                 card.style.transitionDelay = `${index * 100}ms`;
                 card.onclick = () => selectSubService(categoryKey, sub.id);
                 
+
                 card.innerHTML = `
                     <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-400 text-xl group-hover:bg-amber-400 group-hover:text-slate-900 transition-all duration-500 shadow-inner flex-shrink-0">
                         <i class="fa-solid ${sub.icon}"></i>
@@ -426,11 +455,11 @@
 
             mainView.style.opacity = '0';
             mainView.style.transform = 'translateX(-30px)';
-            
+
             setTimeout(() => {
                 mainView.classList.add('hidden');
                 subView.classList.remove('hidden');
-                void subView.offsetWidth; 
+                void subView.offsetWidth;
                 subView.style.opacity = '1';
                 subView.style.transform = 'translateX(0)';
 

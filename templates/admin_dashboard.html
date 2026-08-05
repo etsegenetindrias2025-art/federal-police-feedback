@@ -192,7 +192,7 @@
                         <th>Submission Date & Time</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="report-table-body">
                     {% if feedbacks %}
                         {% for fb in feedbacks %}
                         <tr>
@@ -330,6 +330,39 @@
                         openDropdown.classList.remove('active');
                     }
                 }
+            }
+        }
+
+        // Date-specific report filtering function
+        async function fetchReportByDate(year, month, day) {
+            try {
+                let url = `/api/reports/filter?year=${year}&month=${month}&day=${day}`;
+                let response = await fetch(url);
+                let data = await response.json();
+                
+                console.log("Filtered Reports:", data);
+                
+                let tableBody = document.getElementById('report-table-body');
+                if (tableBody) {
+                    tableBody.innerHTML = ''; // Clear old rows
+                    if (data && data.length > 0) {
+                        data.forEach(row => {
+                            let tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td>#${row.id}</td>
+                                <td><span class="badge-service">${row.service_type || row.service}</span></td>
+                                <td><span class="badge-rating">${row.rating}</span></td>
+                                <td><div class="comment-text">${row.comment || 'No comment provided.'}</div></td>
+                                <td><div class="date-text">${row.date || row.timestamp}</div></td>
+                            `;
+                            tableBody.appendChild(tr);
+                        });
+                    } else {
+                        tableBody.innerHTML = `<tr><td colspan="5" class="no-data">No feedback records found for this date.</td></tr>`;
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching report:", error);
             }
         }
     </script>
