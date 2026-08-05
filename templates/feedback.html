@@ -287,6 +287,41 @@
                 alertMismatch: "Your feedback is not the same with your rate! ‼️",
                 successTitle: "thank you! 😊",
                 successDesc: "your feedback has been submitted successfully ✅"
+            },
+            om: {
+                hdrTitle: "Poolisii Federaalaa Itoophiyaa",
+                hdrSub: "Sirna Yaada Lammiilee",
+                mainHeading: "Tajaajila kennameef hangam quufteetta?",
+                mainDesc: "Maaloo sadarkaa quufaa keessan filannoo gadii irraa filachuudhaan ibsaa.",
+                l1: "Bayyee hin quufne", l2: "Hin quufne", l3: "Giddu-galeessa", l4: "Quufeera", l5: "Bayyee quufeera",
+                lblComment: "Yaada keessan barreessaa (Filannoo):",
+                commentPlaceholder: "Yaada yookan ibsa tajaajilichaa barreessaa...",
+                recStatus: "Sagalee galchuuf maayikii cuqaasaa",
+                recActive: "Dhaggeeffachaa jira...",
+                btnBack: "Duubatti deebi'i",
+                btnSubmit: "Galchi & Xumuri",
+                errRating: "Maaloo osoo hin itti fufin dura sadarkaa quufaa filadhaa!",
+                alertMismatch: "Yaadni keessan sadarkaa kennitan wajjin wal hin simu! ‼️",
+                successTitle: "Galatoomaa! 😊",
+                successDesc: "Yaadni keessan milkaa'inaan galmeeffameera ✅"
+            },
+            ti: {
+                hdrTitle: "ፌዴራል ፖሊስ ኢትዮጵያ",
+                hdrSub: "ስርዓት ርእይቶ ህዝቢ",
+                mainHeading: "ብዝተወሃበካ ኣገልግሎት ክንደይ ዕጉብ ኢኻ?",
+                mainHeadingTi: "ብዝተወሃበካ ኣገልግሎት ክንደይ ዕጉብ ኢኻ?",
+                mainDesc: "ሕርያ ዕግበትኩም ካብቲ ታሕቲ ዘሎ ምርጫ ብምርካብ ብትሕትና ግለጹና።",
+                l1: "ኣዝየ ኣይዕገብኩን", l2: "ኣይዕገብኩን", l3: "ማእከላይ", l4: "ዕጉብ እየ", l5: "ኣዝየ ዕጉብ እየ",
+                lblComment: "ርእይቶኹም ብጽሑፍ ጽሓፉ (ግድነት ዘይብሉ):",
+                commentPlaceholder: "ብዛዕባ ዝተወሃበካ ኣገልግሎት ሓሳብ ወይ ርእይቶ ጽሓፉ...",
+                recStatus: "ድምጽ ንምቕራጽ ማይክ ጠውቑ",
+                recActive: "ድምጽ ይቐዳሕ ኣሎ...",
+                btnBack: "ንድሕሪት ተመለስ",
+                btnSubmit: "እቱ & ወዳእ",
+                errRating: "ብቐዳምነት ናይ ደረጃ ምልክት (Rating) ምረጹ!",
+                alertMismatch: "ዝሃብዎ ደረጃን ዝጸሓፍዎ ርእይቶን ፈጺሞም ኣይሰማዕን! ‼️",
+                successTitle: "የቐንየለይ! 😊",
+                successDesc: "ርእይቶኹም ብትኽክል ተመዝጊቡ ኣሎ ✅"
             }
         };
 
@@ -320,7 +355,7 @@
             document.getElementById('alert-box').classList.add('hidden');
         }
 
-        // Fixed Speech-to-Text Recognition Integration
+        // Speech-to-Text Recognition Integration
         const micBtn = document.getElementById('record-btn');
         const micIcon = document.getElementById('mic-icon');
         const recordStatus = document.getElementById('record-status');
@@ -331,7 +366,8 @@
 
             if (SpeechRecognition) {
                 const recognition = new SpeechRecognition();
-                recognition.lang = lang === 'am' ? 'am-ET' : 'en-US';
+                // Sets the language code based on what language the user selected (Amharic, Oromo, Tigrinya, or English)
+                recognition.lang = lang === 'am' ? 'am-ET' : (lang === 'om' ? 'om-ET' : (lang === 'ti' ? 'ti-ET' : 'en-US'));
                 recognition.continuous = false;
                 recognition.interimResults = true;
 
@@ -420,28 +456,46 @@
                 return;
             }
 
+            // Get user comment
             const comment = document.getElementById('user-comment').value.trim().toLowerCase();
             
+            // Expanded keywords covering Amharic variations, phrase negations, Oromo, Tigrinya, and English
             const negativeKeywords = [
-                'አላረኩም', 'መጥፎ', 'ክፉ', 'አይሰራም', 'ዘግዩ', 'ችግር', 'ደስ አላለኝም', 'አዘንኩኝ', 
+                // Amharic Negatives
+                'አላረኩም', 'አልረካሁም', 'አላረካሁም', 'መጥፎ', 'ክፉ', 'አይሰራም', 'ዘግዩ', 'ዘግይቷል', 'ችግር', 
+                'ደስ አላለኝም', 'አዘንኩ', 'አልወደድኩ', 'አልተመቸኝም', 'አያስደስትም', 'አይረባም',
+                'ጥሩ አይደለም', 'አሪፍ አይደለም', 'ቆንጆ አይደለም', 'አልተሰራም', 'አልተስተናገድኩም',
+                // Oromo Negatives
+                'hin quufne', 'rakkoo', 'gadhee', 'taa\'uu dhabuu', 'ciniinsuu', 'hin jaalanne', 'hin hojjenne',
+                // Tigrinya Negatives
+                'ኣይዕገብኩን', 'ፉሉይ', 'ሕማቕ', 'ጸገም', 'ዘይተደለየ', 'ኣይፈቶኹዎን', 'ኣይሰርሕን',
+                // English Negatives
                 'bad', 'worst', 'poor', 'useless', 'terrible', 'hate', 'angry', 'not satisfied', 
-                'disappointed', 'not good', 'it is not good', "it's not good", 'hin quufne', 'rakkoo'
+                'disappointed', 'not good', 'it is not good', "it's not good"
             ];
             
             const positiveKeywords = [
-                'ረክቻለሁ', 'አመሰግናለሁ', 'ጥሩ', 'አሪፍ', 'ፈጣን', 'ደስ ይላል', 
-                'good', 'great', 'excellent', 'satisfied', 'happy', 'thank', 'wonderful', 'nice', 'quufeera', 'bayyee gaarii'
+                // Amharic Positives
+                'ረክቻለሁ', 'አመሰግናለሁ', 'ጥሩ', 'አሪፍ', 'ፈጣን', 'ደስ ይላል', 'ተመችቶኛል', 'ቆንጆ', 'በጣም ጥሩ', 'ድንቅ',
+                // Oromo Positives
+                'quufeera', 'bayyee gaarii', 'galatoomaa', 'ayyaana', 'milkaa\'ina', 'baay\'ee gaarii', 'bareedaa',
+                // Tigrinya Positives
+                'ዕጉብ እየ', 'የቐንየለይ', 'ጽቡቕ', 'ቅኑዕ', 'ደስ ዝብል', 'ብሉጽ', 'ጽቡቅ',
+                // English Positives
+                'good', 'great', 'excellent', 'satisfied', 'happy', 'thank', 'wonderful', 'nice', 'awesome'
             ];
 
             let hasNegative = negativeKeywords.some(w => comment.includes(w));
             let hasPositive = positiveKeywords.some(w => comment.includes(w));
 
+            // Rule 1: High Rating (4 or 5) but wrote a NEGATIVE word
             if ((selectedScore === '4' || selectedScore === '5') && hasNegative) {
                 alertText.textContent = t.alertMismatch;
                 alertBox.classList.remove('hidden');
                 return; 
             }
 
+            // Rule 2: Low Rating (1 or 2) but wrote a POSITIVE word (and no negative words)
             if ((selectedScore === '1' || selectedScore === '2') && hasPositive && !hasNegative) {
                 alertText.textContent = t.alertMismatch;
                 alertBox.classList.remove('hidden');
@@ -449,16 +503,13 @@
             }
 
             const emojiMap = {
-                '1': '😡',
-                '2': '🙁',
-                '3': '😐',
-                '4': '😊',
-                '5': '😍'
+                '1': '😡', '2': '🙁', '3': '😐', '4': '😊', '5': '😍'
             };
             const selectedEmoji = emojiMap[selectedScore] || '😊';
 
-            alertBox.classList.add('hidden');
+            alertBox.classList.add('hidden'); // Hide error box if validation passes
 
+            // Submit logic
             fetch('/submit-feedback', {
                 method: 'POST',
                 headers: {

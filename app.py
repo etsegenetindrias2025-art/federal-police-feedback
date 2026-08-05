@@ -221,7 +221,6 @@ def get_admin_credentials():
             "sub_service": "all",
             "title": "Other Department Admin"
         },
-        # Police Clearance Sub-services
         "admin new": {
             "password": "1234", "type": "sub_service", "service": "police_clearance", "sub_service": "new_clearance", "title": "Sub-Service Admin: New Police Clearance"
         },
@@ -237,7 +236,6 @@ def get_admin_credentials():
         "admin doc": {
             "password": "1234", "type": "sub_service", "service": "police_clearance", "sub_service": "document_collection", "title": "Sub-Service Admin: Document Collection"
         },
-        # Complaint Sub-services
         "admin pub": {
             "password": "1234", "type": "sub_service", "service": "complaint", "sub_service": "public_office", "title": "Sub-Service Admin: Public Complaint Office"
         },
@@ -250,7 +248,6 @@ def get_admin_credentials():
         "admin res": {
             "password": "1234", "type": "sub_service", "service": "complaint", "sub_service": "resolution", "title": "Sub-Service Admin: Resolution"
         },
-        # Hospital Sub-services
         "admin opd": {
             "password": "1234", "type": "sub_service", "service": "hospital", "sub_service": "opd", "title": "Sub-Service Admin: OPD"
         },
@@ -266,7 +263,6 @@ def get_admin_credentials():
         "admin med": {
             "password": "1234", "type": "sub_service", "service": "hospital", "sub_service": "medical_exam", "title": "Sub-Service Admin: Medical Examination"
         },
-        # Logistics Sub-services
         "admin veh": {
             "password": "1234", "type": "sub_service", "service": "logistics", "sub_service": "vehicle_mgmt", "title": "Sub-Service Admin: Vehicle Management"
         },
@@ -279,7 +275,6 @@ def get_admin_credentials():
         "admin pro": {
             "password": "1234", "type": "sub_service", "service": "logistics", "sub_service": "procurement", "title": "Sub-Service Admin: Procurement"
         },
-        # Education & Training Sub-services
         "admin stu": {
             "password": "1234", "type": "sub_service", "service": "education_training", "sub_service": "student_reg", "title": "Sub-Service Admin: Student Registration"
         },
@@ -295,7 +290,6 @@ def get_admin_credentials():
         "admin aca": {
             "password": "1234", "type": "sub_service", "service": "education_training", "sub_service": "academic_records", "title": "Sub-Service Admin: Academic Records"
         },
-        # Other Sub-services
         "admin rec": {
             "password": "1234", "type": "sub_service", "service": "other", "sub_service": "reception", "title": "Sub-Service Admin: Reception"
         },
@@ -312,7 +306,6 @@ def get_admin_credentials():
             "password": "1234", "type": "sub_service", "service": "other", "sub_service": "admin", "title": "Sub-Service Admin: Administration"
         }
     }
-    
     return credentials
 
 # Public Routes
@@ -393,6 +386,11 @@ def admin_login():
             error = "Invalid Username or Password. Please try again."
             
     return render_template('admin_login.html', error=error)
+
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('admin_user', None)
+    return redirect(url_for('admin_login'))
 
 @app.route('/admin/dashboard')
 def admin_dashboard():
@@ -578,7 +576,7 @@ def admin_settings():
                         error = "Service key already exists or invalid input."
                 else:
                     error = "All fields are required to add a service."
-
+                    
             elif action == 'update_service':
                 s_key = request.form.get('service_key')
                 s_name = request.form.get('new_service_name').strip()
@@ -685,16 +683,17 @@ def export_report(format):
     conn = get_db_connection()
     cursor = conn.cursor()
     
+    # Changed ORDER BY timestamp ASC so that records appear from 1 to 18 chronologically
     if admin_type == 'general':
         service_filter = request.args.get('service', 'all')
         if service_filter == 'all':
-            cursor.execute("SELECT * FROM feedbacks ORDER BY timestamp DESC")
+            cursor.execute("SELECT * FROM feedbacks ORDER BY timestamp ASC")
         else:
-            cursor.execute("SELECT * FROM feedbacks WHERE service_name = %s ORDER BY timestamp DESC", (service_filter,))
+            cursor.execute("SELECT * FROM feedbacks WHERE service_name = %s ORDER BY timestamp ASC", (service_filter,))
     elif admin_type == 'service':
-        cursor.execute("SELECT * FROM feedbacks WHERE service_name = %s ORDER BY timestamp DESC", (assigned_service,))
+        cursor.execute("SELECT * FROM feedbacks WHERE service_name = %s ORDER BY timestamp ASC", (assigned_service,))
     elif admin_type == 'sub_service':
-        cursor.execute("SELECT * FROM feedbacks WHERE service_name = %s AND sub_service = %s ORDER BY timestamp DESC", (assigned_service, assigned_sub))
+        cursor.execute("SELECT * FROM feedbacks WHERE service_name = %s AND sub_service = %s ORDER BY timestamp ASC", (assigned_service, assigned_sub))
         
     feedbacks = cursor.fetchall()
     cursor.close()
@@ -703,23 +702,38 @@ def export_report(format):
     service_map = get_service_map()
     sub_service_map = get_sub_service_map()
 
+    # Mapping emojis to readable text descriptions
+    rating_text_map = {
+        "😍": "Very Satisfied",
+        "😊": "Satisfied",
+        "😐": "Neutral",
+        "🙁": "Not Satisfied",
+        "😠": "Very Dissatisfied"
+    }
+
     if format == 'excel':
         import pandas as pd
-        data = [{
-            'ID': fb['id'],
-            'Service': service_map.get(fb['service_name'], fb['service_name']),
-            'Sub-Service': sub_service_map.get(fb['service_name'], {}).get(fb['sub_service'], fb['sub_service']),
-            'Rating': fb['rating'],
-            'Comment': fb['comment'],
-            'Timestamp': str(fb['timestamp'])
-        } for fb in feedbacks]
+        data = []
+        for index, fb in enumerate(feedbacks, start=1):
+            raw_rating = str(fb['rating']).strip()
+            # Combines the emoji and its text label description, e.g., "😍 - Very Satisfied"
+            mapped_rating = rating_text_map.get(raw_rating, raw_rating)
+            rating_display = f"{raw_rating} ({mapped_rating})" if mapped_rating else raw_rating
+
+            data.append({
+                'ID': index,
+                'Service': service_map.get(fb['service_name'], fb['service_name']),
+                'Sub-Service': sub_service_map.get(fb['service_name'], {}).get(fb['sub_service'], fb['sub_service']),
+                'Rating': rating_display,
+                'Comment': fb['comment'],
+                'Timestamp': str(fb['timestamp'])
+            })
         
         df = pd.DataFrame(data)
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='Feedback Report')
             
-            # Auto-adjust column widths
             worksheet = writer.sheets['Feedback Report']
             for col in worksheet.columns:
                 max_len = max(len(str(cell.value or '')) for cell in col)
@@ -740,10 +754,12 @@ def export_report(format):
         p.drawString(50, 750, "Ethiopian Federal Police - Report")
         
         y = 710
-        for fb in feedbacks:
+        for index, fb in enumerate(feedbacks, start=1):
             s_name = service_map.get(fb['service_name'], fb['service_name'])
             sub_name = sub_service_map.get(fb['service_name'], {}).get(fb['sub_service'], fb['sub_service'])
-            p.drawString(50, y, f"ID: {fb['id']} | Service: {s_name} ({sub_name}) | Rating: {fb['rating']}")
+            raw_rating = str(fb['rating']).strip()
+            mapped_rating = rating_text_map.get(raw_rating, raw_rating)
+            p.drawString(50, y, f"ID: {index} | Service: {s_name} ({sub_name}) | Rating: {raw_rating} ({mapped_rating})")
             y -= 20
             if y < 50:
                 p.showPage()
@@ -759,10 +775,12 @@ def export_report(format):
         
         doc = Document()
         doc.add_heading('Ethiopian Federal Police - Report', 0)
-        for fb in feedbacks:
+        for index, fb in enumerate(feedbacks, start=1):
             s_name = service_map.get(fb['service_name'], fb['service_name'])
             sub_name = sub_service_map.get(fb['service_name'], {}).get(fb['sub_service'], fb['sub_service'])
-            doc.add_paragraph(f"ID: {fb['id']}\nService: {s_name} - Sub-Service: {sub_name}\nRating: {fb['rating']}\nComment: {fb['comment']}\nDate: {fb['timestamp']}\n---")
+            raw_rating = str(fb['rating']).strip()
+            mapped_rating = rating_text_map.get(raw_rating, raw_rating)
+            doc.add_paragraph(f"ID: {index}\nService: {s_name} - Sub-Service: {sub_name}\nRating: {raw_rating} ({mapped_rating})\nComment: {fb['comment']}\nDate: {fb['timestamp']}\n---")
             
         output = io.BytesIO()
         doc.save(output)
@@ -771,62 +789,36 @@ def export_report(format):
         return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                          as_attachment=True, download_name='feedback_report.docx')
 
-    return redirect(url_for('admin_dashboard'))
-
-@app.route('/admin/logout')
-def admin_logout():
-    session.pop('admin_user', None)
-    return redirect(url_for('admin_login'))
-
-# Text-to-Speech Endpoint with Client-Side Fallback Support
-@app.route('/speak')
-def speak():
-    text = request.args.get('text', 'Welcome')
-    lang = request.args.get('lang', 'am')
+@app.route('/kiosk-qr')
+def kiosk_qr():
+    host_ip = socket.gethostbyname(socket.gethostname())
+    kiosk_url = f"http://{host_ip}:5000/"
     
-    # gTTS natively supports 'am' (Amharic) and 'en' (English).
-    # For languages like Afaan Oromoo ('om') and Tigrinya ('ti') which gTTS does not have native audio profiles for,
-    # we point them safely or use a browser-native voice trigger alternative.
-    supported_gtts_langs = {'en': 'en', 'am': 'am'}
+    img = qrcode.make(kiosk_url)
+    buf = io.BytesIO()
+    img.save(buf)
+    buf.seek(0)
     
-    tts_lang = supported_gtts_langs.get(lang)
-    
-    if not tts_lang:
-        # Return a special JSON status telling the frontend to use browser SpeechSynthesis instead of MP3 file download
-        return jsonify({
-            "status": "use_browser_tts", 
-            "lang": lang, 
-            "text": text
-        }), 200
+    return send_file(buf, mimetype='image/png')
 
+@app.route('/audio-feedback', methods=['POST'])
+def audio_feedback():
     try:
-        tts = gTTS(text=text, lang=tts_lang, slow=False)
-        audio_fp = io.BytesIO()
-        tts.write_to_fp(audio_fp)
-        audio_fp.seek(0)
+        data = request.get_json()
+        text = data.get('text', '')
+        lang = data.get('lang', 'am')
         
-        return send_file(
-            audio_fp, 
-            mimetype="audio/mp3", 
-            as_attachment=False, 
-            download_name="voice.mp3"
-        )
+        if not text:
+            return jsonify({"error": "No text provided"}), 400
+            
+        tts = gTTS(text=text, lang=lang, slow=False)
+        fp = io.BytesIO()
+        tts.write_to_fp(fp)
+        fp.seek(0)
+        
+        return send_file(fp, mimetype='audio/mpeg')
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    os.makedirs("static/images", exist_ok=True)
-    
-    try:
-        hostname = socket.gethostname()
-        local_ip = socket.gethostbyname(hostname)
-    except Exception:
-        local_ip = "127.0.0.1"
-
-    app_url = f"http://{local_ip}:5000/"
-    
-    img = qrcode.make(app_url)
-    img.save("static/images/project_qr.png")
-    print(f"QR Code generated successfully for URL: {app_url}")
-
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=True)
