@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ethiopian Federal Police - Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background: #05070b; color: #f3f4f6; min-height: 100vh; display: flex; flex-direction: column; }
@@ -24,20 +25,26 @@
         .logout-btn:hover { transform: translateY(-2px); }
         
         .dropdown { position: relative; display: inline-block; }
-        .dropdown-content { display: none; position: absolute; right: 0; background-color: #111827; min-width: 200px; box-shadow: 0px 10px 25px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; z-index: 1001; overflow: hidden; }
+        .dropdown-content { display: none; position: absolute; right: 0; background-color: #111827; min-width: 240px; box-shadow: 0px 10px 25px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; z-index: 1001; overflow: hidden; }
         .dropdown-content a { color: #f3f4f6; padding: 12px 16px; text-decoration: none; display: block; font-size: 13px; transition: 0.2s; cursor: pointer; }
         .dropdown-content a:hover { background-color: rgba(56,189,248,0.15); color: #38bdf8; }
         .dropdown.active .dropdown-content { display: block; }
 
         .container { max-width: 1400px; margin: 35px auto; padding: 0 25px; width: 100%; flex: 1; }
         
-        .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: linear-gradient(135deg, #111827, #1f2937); padding: 25px 35px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.06); }
+        .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: linear-gradient(135deg, #111827, #1f2937); padding: 25px 35px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.06); flex-wrap: wrap; gap: 20px; }
         .dashboard-header h2 { font-size: 26px; color: #ffffff; font-weight: 700; }
         .dashboard-header p { color: #9ca3af; margin-top: 6px; font-size: 14px; }
         
         .header-controls { display: flex; align-items: center; gap: 15px; }
         .total-badge { background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); padding: 10px 22px; border-radius: 35px; font-weight: 700; color: #34d399; font-size: 15px; display: flex; align-items: center; gap: 8px; }
         .total-badge span { width: 10px; height: 10px; background: #34d399; border-radius: 50%; display: inline-block; }
+
+        .search-form { display: flex; gap: 10px; margin-bottom: 25px; width: 100%; }
+        .search-input { flex: 1; background: #111827; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 18px; color: #fff; font-size: 14px; outline: none; transition: 0.3s; }
+        .search-input:focus { border-color: #f59e0b; box-shadow: 0 0 10px rgba(245,158,11,0.2); }
+        .search-btn { background: #f59e0b; color: #111827; border: none; padding: 0 24px; border-radius: 12px; font-weight: 700; font-size: 14px; cursor: pointer; transition: 0.3s; }
+        .search-btn:hover { background: #fbbf24; transform: translateY(-1px); }
 
         .dashboard-grid { display: grid; grid-template-columns: 1.1fr 1.9fr; gap: 25px; margin-bottom: 35px; }
         @media(max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
@@ -62,6 +69,15 @@
         .folder-card h4 { font-size: 15px; color: #f3f4f6; margin-bottom: 4px; font-weight: 600; }
         .folder-card span { font-size: 12px; color: #9ca3af; }
 
+        .filter-container { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 16px; padding: 20px; margin-bottom: 25px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; backdrop-filter: blur(8px); }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 180px; }
+        .filter-group label { font-size: 10px; text-transform: uppercase; font-weight: 700; color: #f59e0b; letter-spacing: 0.05em; }
+        .filter-group select, .filter-group input { background: #030712; border: 1px solid #334155; color: #ffffff; font-size: 12px; border-radius: 10px; padding: 8px 12px; outline: none; transition: 0.2s; width: 100%; }
+        .filter-group select:focus, .filter-group input:focus { border-color: #f59e0b; }
+
+        .apply-filter-btn { background: #f59e0b; color: #030712; font-weight: 800; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; height: max-content; align-self: flex-end; }
+        .apply-filter-btn:hover { background: #fbbf24; }
+
         .table-section { background: #111827; border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; padding: 25px; overflow-x: auto; }
         .table-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
         .table-section h3 { font-size: 20px; color: #f9fafb; font-weight: 600; }
@@ -78,7 +94,6 @@
         .date-text { color: #9ca3af; font-size: 13px; }
         .no-data { text-align: center; padding: 50px; color: #9ca3af; }
 
-        /* Modal Overlay for Export & Share Options */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 2000; justify-content: center; align-items: center; }
         .modal-overlay.active { display: flex; }
         .modal-card { background: #111827; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 30px; width: 450px; max-width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center; }
@@ -128,6 +143,18 @@
             </div>
         </div>
 
+        <!-- Search Form Component -->
+        <form method="GET" action="{{ url_for('admin_dashboard') }}" class="search-form">
+            <input 
+                type="text" 
+                name="search" 
+                value="{{ search_query }}" 
+                placeholder="Search by ID, Service, Language, Rating, Comment, or Date..." 
+                class="search-input"
+            >
+            <button type="submit" class="search-btn">Search</button>
+        </form>
+
         {% if is_general %}
         <div class="dashboard-grid">
             <div class="card">
@@ -166,18 +193,57 @@
         </div>
         {% endif %}
 
+        <!-- Advanced Filters Panel -->
+        <form method="GET" action="{{ url_for('admin_dashboard') }}" class="filter-container">
+            <div class="filter-group">
+                <label for="service_filter">SERVICE</label>
+                <select name="service_filter" id="service_filter">
+                    <option value="all">All Services</option>
+                    {% for key, name in service_map.items() %}
+                        <option value="{{ key }}" {% if request.args.get('service_filter') == key %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="rating">RATING</label>
+                <select name="rating" id="rating">
+                    <option value="">All Ratings</option>
+                    <option value="😍" {% if request.args.get('rating') == '😍' %}selected{% endif %}>😍 Very Satisfied</option>
+                    <option value="😊" {% if request.args.get('rating') == '😊' %}selected{% endif %}>😊 Satisfied</option>
+                    <option value="😐" {% if request.args.get('rating') == '😐' %}selected{% endif %}>😐 Neutral</option>
+                    <option value="🙁" {% if request.args.get('rating') == '🙁' %}selected{% endif %}>🙁 Not Satisfied</option>
+                    <option value="😠" {% if request.args.get('rating') == '😠' %}selected{% endif %}>😠 Very Dissatisfied</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="date_from">DATE FROM</label>
+                <input type="date" name="date_from" id="date_from" value="{{ request.args.get('date_from', '') }}">
+            </div>
+
+            <div class="filter-group">
+                <label for="date_to">DATE TO</label>
+                <input type="date" name="date_to" id="date_to" value="{{ request.args.get('date_to', '') }}">
+            </div>
+
+            <button type="submit" class="apply-filter-btn">
+                <i class="fas fa-filter"></i> Apply Filter
+            </button>
+        </form>
+
         <div class="table-section">
             <div class="table-section-header">
                 <h3>📋 Database Records {% if current_filter != 'all' %}(Folder: {{ service_map.get(current_filter, current_filter) }}){% endif %}</h3>
                 
-                <div class="dropdown" id="exportDropdown">
-                    <button class="action-btn" onclick="toggleDropdown(event)">
+                <div class="dropdown" id="exportDropdownContainer">
+                    <button class="action-btn" type="button" onclick="toggleDropdown(event)">
                         📥 Export Report ▾
                     </button>
                     <div class="dropdown-content">
-                        <a onclick="triggerExport('excel', '{{ current_filter }}')">📊 Export to Excel (.xlsx)</a>
-                        <a onclick="triggerExport('pdf', '{{ current_filter }}')">📄 Export to PDF (.pdf)</a>
-                        <a onclick="triggerExport('word', '{{ current_filter }}')">📝 Export to Word (.docx)</a>
+                        <a href="{{ url_for('export_excel', service=request.args.get('service', current_filter), service_filter=request.args.get('service_filter', ''), rating=request.args.get('rating', ''), date_from=request.args.get('date_from', ''), date_to=request.args.get('date_to', ''), search=request.args.get('search', '')) }}" onclick="handleExportClick('excel')">📊 Export to Excel (.xlsx)</a>
+                        <a href="{{ url_for('export_word', service=request.args.get('service', current_filter), service_filter=request.args.get('service_filter', ''), rating=request.args.get('rating', ''), date_from=request.args.get('date_from', ''), date_to=request.args.get('date_to', ''), search=request.args.get('search', '')) }}" onclick="handleExportClick('word')">📝 Export to Word (.docx)</a>
+                        <a href="{{ url_for('export_pdf', service=request.args.get('service', current_filter), service_filter=request.args.get('service_filter', ''), rating=request.args.get('rating', ''), date_from=request.args.get('date_from', ''), date_to=request.args.get('date_to', ''), search=request.args.get('search', '')) }}" onclick="handleExportClick('pdf')">📄 Export to PDF (.pdf)</a>
                     </div>
                 </div>
             </div>
@@ -199,7 +265,7 @@
                             <td>#{{ fb.id }}</td>
                             <td>
                                 <div>
-                                    {% set raw_service = fb.service | string | trim %}
+                                    {% set raw_service = fb.service_name | string | trim %}
                                     {% set s_key = raw_service | lower %}
                                     <span class="badge-service">{{ service_map.get(s_key, raw_service) if service_map is defined and s_key in service_map else raw_service }}</span>
                                 </div>
@@ -231,7 +297,7 @@
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="5" class="no-data">No feedback records found in this folder/database.</td>
+                            <td colspan="5" class="no-data">No feedback records found matching your query or folder criteria.</td>
                         </tr>
                     {% endif %}
                 </tbody>
@@ -297,15 +363,14 @@
     <script>
         function toggleDropdown(event) {
             event.stopPropagation();
-            document.getElementById("exportDropdown").classList.toggle("active");
+            document.getElementById("exportDropdownContainer").classList.toggle("active");
         }
 
-        function triggerExport(format, service) {
-            document.getElementById("exportDropdown").classList.remove("active");
+        function handleExportClick(format) {
+            document.getElementById("exportDropdownContainer").classList.remove("active");
             
-            window.location.href = `/admin/export/${format}?service=${service}`;
-            
-            const reportName = `Ethiopian Federal Police Feedback Report (${service.toUpperCase()})`;
+            const serviceVal = "{{ current_filter }}";
+            const reportName = `Ethiopian Federal Police Feedback Report (${serviceVal.toUpperCase()})`;
             const shareText = encodeURIComponent(`Check out the latest feedback report: ${reportName}`);
             
             document.getElementById('whatsappShare').href = `https://api.whatsapp.com/send?text=${shareText}`;
@@ -330,39 +395,6 @@
                         openDropdown.classList.remove('active');
                     }
                 }
-            }
-        }
-
-        // Date-specific report filtering function
-        async function fetchReportByDate(year, month, day) {
-            try {
-                let url = `/api/reports/filter?year=${year}&month=${month}&day=${day}`;
-                let response = await fetch(url);
-                let data = await response.json();
-                
-                console.log("Filtered Reports:", data);
-                
-                let tableBody = document.getElementById('report-table-body');
-                if (tableBody) {
-                    tableBody.innerHTML = ''; // Clear old rows
-                    if (data && data.length > 0) {
-                        data.forEach(row => {
-                            let tr = document.createElement('tr');
-                            tr.innerHTML = `
-                                <td>#${row.id}</td>
-                                <td><span class="badge-service">${row.service_type || row.service}</span></td>
-                                <td><span class="badge-rating">${row.rating}</span></td>
-                                <td><div class="comment-text">${row.comment || 'No comment provided.'}</div></td>
-                                <td><div class="date-text">${row.date || row.timestamp}</div></td>
-                            `;
-                            tableBody.appendChild(tr);
-                        });
-                    } else {
-                        tableBody.innerHTML = `<tr><td colspan="5" class="no-data">No feedback records found for this date.</td></tr>`;
-                    }
-                }
-            } catch (error) {
-                console.error("Error fetching report:", error);
             }
         }
     </script>

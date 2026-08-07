@@ -8,6 +8,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Noto+Sans+Ethiopic:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        /* ---------------------------------------------------------------
+            Base layout
+        ----------------------------------------------------------------*/
         body {
             font-family: 'Montserrat', 'Noto Sans Ethiopic', sans-serif;
             background: radial-gradient(circle at center, #172554, #0f172a, #020617);
@@ -22,20 +25,22 @@
             overflow-x: hidden;
         }
 
-        @keyframes professionalFadeIn {
-            0% { opacity: 0; transform: translateY(40px) scale(0.96); }
-            100% { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        .page-enter {
-            animation: professionalFadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
         .glass-panel {
             background: rgba(15, 23, 42, 0.88);
             backdrop-filter: blur(40px);
             border: 1px solid rgba(251, 191, 36, 0.35);
             box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.95);
+        }
+
+        /* ---------------------------------------------------------------
+            Page / card entrance animations
+        ----------------------------------------------------------------*/
+        @keyframes professionalFadeIn {
+            0% { opacity: 0; transform: translateY(40px) scale(0.96); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .page-enter {
+            animation: professionalFadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         @keyframes ultraSmoothDrop {
@@ -44,13 +49,15 @@
             85% { opacity: 1; transform: translateY(-6px) scale(0.98); }
             100% { opacity: 1; transform: translateY(0) scale(1); }
         }
-
         .drop-anim-1 { animation: ultraSmoothDrop 1.6s cubic-bezier(0.2, 0.9, 0.3, 1) 0.25s both; }
         .drop-anim-2 { animation: ultraSmoothDrop 1.6s cubic-bezier(0.2, 0.9, 0.3, 1) 0.40s both; }
         .drop-anim-3 { animation: ultraSmoothDrop 1.6s cubic-bezier(0.2, 0.9, 0.3, 1) 0.55s both; }
         .drop-anim-4 { animation: ultraSmoothDrop 1.6s cubic-bezier(0.2, 0.9, 0.3, 1) 0.70s both; }
         .drop-anim-5 { animation: ultraSmoothDrop 1.6s cubic-bezier(0.2, 0.9, 0.3, 1) 0.85s both; }
 
+        /* ---------------------------------------------------------------
+            Rating cards
+        ----------------------------------------------------------------*/
         .rating-card {
             background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.98));
             border: 1px solid rgba(251, 191, 36, 0.2);
@@ -83,6 +90,9 @@
             transition: transform 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.7s ease;
         }
 
+        /* ---------------------------------------------------------------
+            Voice recorder / voice guide
+        ----------------------------------------------------------------*/
         @keyframes pulseGlow {
             0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
             70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
@@ -92,15 +102,6 @@
             animation: pulseGlow 1.5s infinite;
             background-color: #dc2626 !important;
             border-color: #f87171 !important;
-        }
-
-        @keyframes smoothBounce {
-            0%, 100% { transform: translateY(0) scale(1); }
-            50% { transform: translateY(-6px) scale(1.15); }
-        }
-        .success-motion-icon {
-            display: inline-block;
-            animation: smoothBounce 2s ease-in-out infinite;
         }
 
         .voice-guide-container {
@@ -133,6 +134,18 @@
             color: #ffffff;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
+        }
+
+        /* ---------------------------------------------------------------
+            Success modal
+        ----------------------------------------------------------------*/
+        @keyframes smoothBounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-6px) scale(1.15); }
+        }
+        .success-motion-icon {
+            display: inline-block;
+            animation: smoothBounce 2s ease-in-out infinite;
         }
     </style>
 </head>
@@ -235,6 +248,7 @@
         </div>
     </div>
 
+    <!-- Success Modal -->
     <div id="success-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 hidden opacity-0 transition-opacity duration-500">
         <div class="glass-panel p-8 rounded-3xl text-center max-w-md mx-4 transform scale-90 transition-transform duration-500" id="success-card">
             <div class="text-3xl md:text-4xl font-extrabold text-emerald-400 mb-3 flex items-center justify-center space-x-3">
@@ -248,11 +262,19 @@
     </div>
 
     <script>
+        /* =================================================================
+           1. Page state & URL params
+        ==================================================================*/
         const urlParams = new URLSearchParams(window.location.search);
         const lang = urlParams.get('lang') || 'am';
         const service = urlParams.get('service') || 'police_clearance';
         const subServiceParam = urlParams.get('sub_service') || urlParams.get('sub') || '';
 
+        let selectedScore = '';
+
+        /* =================================================================
+           2. Translations
+        ==================================================================*/
         const translations = {
             am: {
                 hdrTitle: "የኢትዮጵያ ፌዴራል ፖሊስ",
@@ -309,7 +331,6 @@
                 hdrTitle: "ፌዴራል ፖሊስ ኢትዮጵያ",
                 hdrSub: "ስርዓት ርእይቶ ህዝቢ",
                 mainHeading: "ብዝተወሃበካ ኣገልግሎት ክንደይ ዕጉብ ኢኻ?",
-                mainHeadingTi: "ብዝተወሃበካ ኣገልግሎት ክንደይ ዕጉብ ኢኻ?",
                 mainDesc: "ሕርያ ዕግበትኩም ካብቲ ታሕቲ ዘሎ ምርጫ ብምርካብ ብትሕትና ግለጹና።",
                 l1: "ኣዝየ ኣይዕገብኩን", l2: "ኣይዕገብኩን", l3: "ማእከላይ", l4: "ዕጉብ እየ", l5: "ኣዝየ ዕጉብ እየ",
                 lblComment: "ርእይቶኹም ብጽሑፍ ጽሓፉ (ግድነት ዘይብሉ):",
@@ -327,25 +348,29 @@
 
         const t = translations[lang] || translations['en'];
 
-        document.getElementById('hdr-title').textContent = t.hdrTitle;
-        document.getElementById('hdr-sub').textContent = t.hdrSub;
-        document.getElementById('main-heading').textContent = t.mainHeading;
-        document.getElementById('main-desc').textContent = t.mainDesc;
-        document.querySelector('.lbl-1').textContent = t.l1;
-        document.querySelector('.lbl-2').textContent = t.l2;
-        document.querySelector('.lbl-3').textContent = t.l3;
-        document.querySelector('.lbl-4').textContent = t.l4;
-        document.querySelector('.lbl-5').textContent = t.l5;
-        document.getElementById('lbl-comment').textContent = t.lblComment;
-        document.getElementById('user-comment').placeholder = t.commentPlaceholder;
-        document.getElementById('record-status').textContent = t.recStatus;
-        document.getElementById('btn-back').textContent = t.btnBack;
-        document.getElementById('btn-submit').textContent = t.btnSubmit;
-        document.getElementById('success-title-text').textContent = t.successTitle;
-        document.getElementById('success-msg-text').textContent = t.successDesc;
+        function applyTranslations() {
+            document.getElementById('hdr-title').textContent = t.hdrTitle;
+            document.getElementById('hdr-sub').textContent = t.hdrSub;
+            document.getElementById('main-heading').textContent = t.mainHeading;
+            document.getElementById('main-desc').textContent = t.mainDesc;
+            document.querySelector('.lbl-1').textContent = t.l1;
+            document.querySelector('.lbl-2').textContent = t.l2;
+            document.querySelector('.lbl-3').textContent = t.l3;
+            document.querySelector('.lbl-4').textContent = t.l4;
+            document.querySelector('.lbl-5').textContent = t.l5;
+            document.getElementById('lbl-comment').textContent = t.lblComment;
+            document.getElementById('user-comment').placeholder = t.commentPlaceholder;
+            document.getElementById('record-status').textContent = t.recStatus;
+            document.getElementById('btn-back').textContent = t.btnBack;
+            document.getElementById('btn-submit').textContent = t.btnSubmit;
+            document.getElementById('success-title-text').textContent = t.successTitle;
+            document.getElementById('success-msg-text').textContent = t.successDesc;
+        }
+        applyTranslations();
 
-        let selectedScore = '';
-
+        /* =================================================================
+           3. Rating selection
+        ==================================================================*/
         function selectRating(score) {
             selectedScore = score;
             for (let i = 1; i <= 5; i++) {
@@ -355,7 +380,9 @@
             document.getElementById('alert-box').classList.add('hidden');
         }
 
-        // Speech-to-Text Recognition Integration
+        /* =================================================================
+           4. Speech-to-text (comment dictation)
+        ==================================================================*/
         const micBtn = document.getElementById('record-btn');
         const micIcon = document.getElementById('mic-icon');
         const recordStatus = document.getElementById('record-status');
@@ -366,7 +393,6 @@
 
             if (SpeechRecognition) {
                 const recognition = new SpeechRecognition();
-                // Sets the language code based on what language the user selected (Amharic, Oromo, Tigrinya, or English)
                 recognition.lang = lang === 'am' ? 'am-ET' : (lang === 'om' ? 'om-ET' : (lang === 'ti' ? 'ti-ET' : 'en-US'));
                 recognition.continuous = false;
                 recognition.interimResults = true;
@@ -423,13 +449,13 @@
             }
         }
 
-        // Backend gTTS Audio Stream Integration
+        /* =================================================================
+           5. Voice guide (backend gTTS playback)
+        ==================================================================*/
         function playGttsGuide(text, langCode) {
             fetch('/text-to-speech', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: text, lang: langCode })
             })
             .then(response => {
@@ -446,6 +472,13 @@
             });
         }
 
+        /* =================================================================
+           6. Navigation & Submission
+        ==================================================================*/
+        function goBack() {
+            window.location.href = `/services?lang=${lang}`;
+        }
+
         function validateAndSubmit() {
             const alertBox = document.getElementById('alert-box');
             const alertText = document.getElementById('alert-text');
@@ -456,102 +489,69 @@
                 return;
             }
 
-            // Get user comment
             const comment = document.getElementById('user-comment').value.trim().toLowerCase();
-            
-            // Expanded keywords covering Amharic variations, phrase negations, Oromo, Tigrinya, and English
+
             const negativeKeywords = [
-                // Amharic Negatives
-                'አላረኩም', 'አልረካሁም', 'አላረካሁም', 'መጥፎ', 'ክፉ', 'አይሰራም', 'ዘግዩ', 'ዘግይቷል', 'ችግር', 
+                'አላረኩም', 'አልረካሁም', 'አላረካሁም', 'መጥፎ', 'ክፉ', 'አይሰራም', 'ዘግዩ', 'ዘግይቷል', 'ችግር',
                 'ደስ አላለኝም', 'አዘንኩ', 'አልወደድኩ', 'አልተመቸኝም', 'አያስደስትም', 'አይረባም',
                 'ጥሩ አይደለም', 'አሪፍ አይደለም', 'ቆንጆ አይደለም', 'አልተሰራም', 'አልተስተናገድኩም',
-                // Oromo Negatives
                 'hin quufne', 'rakkoo', 'gadhee', 'taa\'uu dhabuu', 'ciniinsuu', 'hin jaalanne', 'hin hojjenne',
-                // Tigrinya Negatives
                 'ኣይዕገብኩን', 'ፉሉይ', 'ሕማቕ', 'ጸገም', 'ዘይተደለየ', 'ኣይፈቶኹዎን', 'ኣይሰርሕን',
-                // English Negatives
-                'bad', 'worst', 'poor', 'useless', 'terrible', 'hate', 'angry', 'not satisfied', 
+                'bad', 'worst', 'poor', 'useless', 'terrible', 'hate', 'angry', 'not satisfied',
                 'disappointed', 'not good', 'it is not good', "it's not good"
             ];
-            
+
             const positiveKeywords = [
-                // Amharic Positives
                 'ረክቻለሁ', 'አመሰግናለሁ', 'ጥሩ', 'አሪፍ', 'ፈጣን', 'ደስ ይላል', 'ተመችቶኛል', 'ቆንጆ', 'በጣም ጥሩ', 'ድንቅ',
-                // Oromo Positives
                 'quufeera', 'bayyee gaarii', 'galatoomaa', 'ayyaana', 'milkaa\'ina', 'baay\'ee gaarii', 'bareedaa',
-                // Tigrinya Positives
                 'ዕጉብ እየ', 'የቐንየለይ', 'ጽቡቕ', 'ቅኑዕ', 'ደስ ዝብል', 'ብሉጽ', 'ጽቡቅ',
-                // English Positives
                 'good', 'great', 'excellent', 'satisfied', 'happy', 'thank', 'wonderful', 'nice', 'awesome'
             ];
 
-            let hasNegative = negativeKeywords.some(w => comment.includes(w));
-            let hasPositive = positiveKeywords.some(w => comment.includes(w));
+            const hasNegative = negativeKeywords.some(w => comment.includes(w));
+            const hasPositive = positiveKeywords.some(w => comment.includes(w));
 
-            // Rule 1: High Rating (4 or 5) but wrote a NEGATIVE word
             if ((selectedScore === '4' || selectedScore === '5') && hasNegative) {
                 alertText.textContent = t.alertMismatch;
                 alertBox.classList.remove('hidden');
-                return; 
+                return;
             }
 
-            // Rule 2: Low Rating (1 or 2) but wrote a POSITIVE word (and no negative words)
             if ((selectedScore === '1' || selectedScore === '2') && hasPositive && !hasNegative) {
                 alertText.textContent = t.alertMismatch;
                 alertBox.classList.remove('hidden');
-                return; 
+                return;
             }
 
-            const emojiMap = {
-                '1': '😡', '2': '🙁', '3': '😐', '4': '😊', '5': '😍'
-            };
-            const selectedEmoji = emojiMap[selectedScore] || '😊';
-
-            alertBox.classList.add('hidden'); // Hide error box if validation passes
-
-            // Submit logic
+            alertBox.classList.add('hidden');
+            
             fetch('/submit-feedback', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    service: service,          
-                    sub_service: subServiceParam || 'General Service',  
-                    rating: selectedEmoji,         
-                    comment: document.getElementById('user-comment').value
+                    service: service,
+                    sub_service: subServiceParam,
+                    rating: selectedScore,
+                    comment: document.getElementById('user-comment').value.trim()
                 })
             })
-            .then(response => response.json())
+            .then(res => res.json())
             .then(data => {
-                console.log("Success:", data);
+                const modal = document.getElementById('success-modal');
+                const card = document.getElementById('success-card');
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    card.classList.remove('scale-90');
+                }, 50);
+
+                setTimeout(() => {
+                    window.location.href = `/services?lang=${lang}`;
+                }, 2000);
             })
-            .catch((error) => {
-                console.error("Error:", error);
+            .catch(err => {
+                console.error("Submission error:", err);
             });
-
-            const successModal = document.getElementById('success-modal');
-            const successCard = document.getElementById('success-card');
-            
-            successModal.classList.remove('hidden');
-            setTimeout(() => {
-                successModal.style.opacity = '1';
-                successCard.style.transform = 'scale(1)';
-            }, 50);
-
-            setTimeout(() => {
-                window.location.href = `/?lang=${lang}`;
-            }, 2500);
-        }
-
-        function goBack() {
-            const body = document.getElementById('body-content');
-            body.style.opacity = '0';
-            body.style.transform = 'translateY(35px)';
-            body.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
-            setTimeout(() => {
-                window.location.href = `/services?lang=${lang}&service=${service}`;
-            }, 550);
         }
     </script>
 </body>
