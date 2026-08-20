@@ -1,74 +1,82 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <Adafruit_Fingerprint.h>
 
-// Wi-Fi credentials (configured for Wokwi simulation)
-const char* ssid = "Wokwi-GUEST";
-const char* password = "";
+// Your Wi-Fi network credentials
+const char* ssid = "TP-Link_1A24_5G";
+const char* password = "58367816";
 
-// Server endpoint 
-// Note: If running in Wokwi simulator, use "http://host.wokwi.internal:5000/api/iot/sensor-event" 
-// or your computer's local network IP address (e.g., "http://192.168.1.100:5000/api/iot/sensor-event")
-const char* serverUrl = "http://host.wokwi.internal:5000/api/iot/sensor-event";
+// Replace with your computer's local IP address running Flask (e.g., 192.168.0.X)
+const char* serverUrl = "http://192.168.0.111:5000/api/fingerprint-scan";
 
-// Pin definitions
-const int pirPin = 14;       // PIR motion sensor pin
-const int buzzerPin = 27;    // Buzzer pin
-const int ledRed = 26;       // Red LED pin
-const int ledGreen = 25;     // Green LED pin
+// Use Hardware Serial 2 on ESP32 (RX=16, TX=17)
+HardwareSerial mySerial(2);
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(115200); // USB Serial for debugging
+  mySerial.begin(57600, SERIAL_8N1, 16, 17); // Sensor serial
   
-  pinMode(pirPin, INPUT);
-  pinMode(buzzerPin, OUTPUT);
-  pinMode(ledRed, OUTPUT);
-  pinMode(ledGreen, OUTPUT);
-
   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
-  Serial.print("Connecting to WiFi");
+  Serial.print("Connecting to Wi-Fi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("\nWiFi connected.");
+  Serial.println("\n--- Wi-Fi Connected ---");
+  Serial.print("ESP32 IP Address: "); 
+  Serial.println(WiFi.localIP());
+
+  // Initialize Fingerprint Sensor
+  finger.begin(57600);
+  if (finger.verifyPassword()) {
+    Serial.println("Fingerprint sensor found and ready!");
+  } else {
+    Serial.println("Sensor not found! Check wiring.");
+    while (1) { delay(1); }
+  }
 }
 
 void loop() {
-  int pirState = digitalRead(pirPin);
-
-  if (pirState == HIGH) {
-    Serial.println("Motion detected by PIR!");
-    
-    // Trigger local feedback indicator
-    digitalWrite(ledGreen, HIGH);
-    digitalWrite(buzzerPin, HIGH);
-    delay(200);
-    digitalWrite(buzzerPin, LOW);
-    
-    // Send HTTP POST request to Flask backend
+  int fingerID = getFingerprintID();
+  if (fingerID >= 0) {
+    // 1. Send HTTP POST to Flask backend when matched
     if (WiFi.status() == WL_CONNECTED) {
       HTTPClient http;
       http.begin(serverUrl);
       http.addHeader("Content-Type", "application/json");
       
-      String payload = "{\"sensor_type\": \"pir\", \"device_id\": \"esp32_kiosk_01\"}";
+      String payload = "{\"finger_id\":" + String(fingerID) + "}";
       int httpResponseCode = http.POST(payload);
       
       if (httpResponseCode > 0) {
-        String response = http.getString();
-        Serial.println("Server Response Code: " + String(httpResponseCode));
-        Serial.println("Server Response: " + response);
+        Serial.println("Access signal successfully sent to Flask server!");
       } else {
-        Serial.print("Error on sending POST: ");
+        Serial.print("Error sending POST: "); 
         Serial.println(httpResponseCode);
       }
       http.end();
     }
     
-    digitalWrite(ledGreen, LOW);
-    delay(5000); // Cooldown to prevent duplicate triggers
+    // 2. Output over USB Serial for wired debugging
+    Serial.print("MATCH_FOUND:");
+    Serial.println(fingerID);
   }
-  
-  delay(100);
+  delay(50);
+}
+
+int getFingerprintID() {
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK) return -1;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK) return -1;
+
+  p = finger.fingerFastSearch();
+  if (p != FINGERPRINT_OK) return -1;
+
+  Serial.print("Scanned ID #"); Serial.print(finger.fingerID); 
+  Serial.print(" (Confidence: "); Serial.print(finger.confidence); Serial.println(")");
+  return finger.fingerID;
 }
