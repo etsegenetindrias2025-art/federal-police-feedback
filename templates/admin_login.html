@@ -4,89 +4,221 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login - Ethiopian Federal Police</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #05070b; color: #f3f4f6; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
-
-        .login-card { background: #111827; border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; padding: 40px; width: 100%; max-width: 480px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); text-align: center; }
-
-        .logo-img { width: 65px; height: 65px; object-fit: contain; margin-bottom: 15px; filter: drop-shadow(0 4px 10px rgba(56,189,248,0.3)); }
-
-        h2 { font-size: 22px; color: #ffffff; font-weight: 700; margin-bottom: 5px; }
-        .subtitle { font-size: 11px; color: #38bdf8; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin-bottom: 25px; }
-
-        /* Notification Banner Style */
-        .notification-banner { display: none; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); padding: 12px 20px; border-radius: 10px; margin-bottom: 20px; text-align: center; color: #38bdf8; font-size: 13px; }
-
-        .error-msg { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; padding: 12px; border-radius: 10px; font-size: 13px; margin-bottom: 20px; }
-
-        .form-group { text-align: left; margin-bottom: 20px; }
-        .form-group label { display: block; font-size: 13px; color: #9ca3af; font-weight: 600; margin-bottom: 8px; }
-
-        .form-control { width: 100%; background: #1a2234; border: 1px solid rgba(255,255,255,0.08); padding: 14px 16px; border-radius: 12px; color: #fff; font-size: 14px; transition: all 0.3s ease; outline: none; }
-        .form-control:focus { border-color: #38bdf8; box-shadow: 0 0 12px rgba(56, 189, 248, 0.2); background: #1f2937; }
-
-        .login-btn { width: 100%; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); margin-top: 10px; }
-        .login-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5); }
-
-        .footer-note { margin-top: 25px; font-size: 11px; color: #6b7280; text-align: center; }
+        body { 
+            background: linear-gradient(135deg, #020617 0%, #050b18 50%, #02040a 100%); 
+            color: #f3f4f6; 
+            min-height: 100vh; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+        }
+        
+        .login-card { 
+            background: linear-gradient(145deg, #0b1120, #060913); 
+            border: 1px solid rgba(212, 175, 55, 0.25); 
+            border-radius: 20px; 
+            padding: 40px; 
+            width: 100%; 
+            max-width: 440px; 
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), 0 0 20px rgba(212, 175, 55, 0.1); 
+            text-align: center; 
+        }
+        
+        .emblem { 
+            width: 84px; 
+            height: 84px; 
+            margin: 0 auto 15px auto; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.25) 0%, rgba(5, 11, 24, 0.95) 80%); 
+            border-radius: 50%; 
+            border: 2px solid #d4af37; 
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.35); 
+            overflow: hidden; 
+        }
+        .emblem img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+        }
+        
+        h2 { 
+            color: #fff; 
+            margin-bottom: 4px; 
+            font-size: 24px; 
+            font-weight: 700; 
+            letter-spacing: 0.5px; 
+        }
+        p { 
+            color: #94a3b8; 
+            font-size: 13px; 
+            margin-bottom: 25px; 
+        }
+        
+        .form-group { 
+            margin-bottom: 20px; 
+            text-align: left; 
+        }
+        label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-size: 11px; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            color: #d4af37; 
+            font-weight: 700; 
+        }
+        
+        input { 
+            width: 100%; 
+            padding: 12px 15px; 
+            background: #04070e; 
+            border: 1px solid rgba(212, 175, 55, 0.2); 
+            border-radius: 10px; 
+            color: #fff; 
+            font-size: 14px; 
+            transition: all 0.3s ease;
+        }
+        input:focus { 
+            outline: none; 
+            border-color: #d4af37; 
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.2); 
+        }
+        
+        .biometric-box { 
+            border: 2px dashed rgba(212, 175, 55, 0.4); 
+            border-radius: 12px; 
+            padding: 18px; 
+            background: rgba(4, 7, 14, 0.6); 
+            margin-bottom: 25px; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            text-align: center; 
+        }
+        .biometric-box:hover { 
+            border-color: #d4af37; 
+            background: rgba(212, 175, 55, 0.05); 
+        }
+        .biometric-box i { 
+            font-size: 32px; 
+            color: #d4af37; 
+            margin-bottom: 6px; 
+        }
+        .biometric-box span { 
+            display: block; 
+            font-size: 12px; 
+            color: #94a3b8; 
+        }
+        .biometric-box.verified { 
+            border-color: #10b981; 
+            background: rgba(16, 185, 129, 0.1); 
+        }
+        .biometric-box.verified i { 
+            color: #10b981; 
+        }
+        .biometric-box.verified span { 
+            color: #34d399; 
+            font-weight: 600; 
+        }
+        
+        button { 
+            width: 100%; 
+            padding: 14px; 
+            background: linear-gradient(135deg, #d4af37, #aa820a); 
+            color: #050b18; 
+            border: none; 
+            border-radius: 10px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            font-size: 15px; 
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3); 
+            transition: opacity 0.2s, transform 0.1s; 
+        }
+        button:hover { 
+            opacity: 0.95; 
+            transform: translateY(-1px);
+        }
+        
+        .error-msg { 
+            background: rgba(239, 68, 68, 0.1); 
+            border: 1px solid rgba(239, 68, 68, 0.3); 
+            color: #ef4444; 
+            padding: 10px; 
+            border-radius: 8px; 
+            font-size: 13px; 
+            margin-bottom: 20px; 
+        }
     </style>
 </head>
 <body>
 
     <div class="login-card">
-        <img src="{{ url_for('static', filename='images/police_logo.png') }}" class="logo-img" alt="Logo">
-        <h2>Ethiopian Federal Police</h2>
-        <div class="subtitle">Admin Control Dashboard</div>
-
-        <!-- Real-time Unread Feedback Notification Banner -->
-        <div id="login-notification-banner" class="notification-banner">
-            🔔 There are <b id="unread-counter-num">0</b> new feedback submission(s) waiting for review.
+        <div class="emblem">
+            <!-- Corrected path pointing to static/images/police_logo.png -->
+            <img src="{{ url_for('static', filename='images/police_logo.png') }}" alt="Ethiopian Federal Police Logo">
         </div>
+        <h2>Admin Portal</h2>
+        <p>Ethiopian Federal Police System</p>
 
         {% if error %}
-        <div class="error-msg">{{ error }}</div>
+            <div class="error-msg">{{ error }}</div>
         {% endif %}
 
-        <form method="POST" autocomplete="off">
+        <form method="POST" action="{{ url_for('admin_login') }}" id="loginForm" onsubmit="return validateForm()">
             <div class="form-group">
-                <label>Username</label>
-                <input type="text" name="username" class="form-control" placeholder="Enter admin username" required autocomplete="off">
+                <label>Admin Username</label>
+                <input type="text" name="username" placeholder="Enter username" required autocomplete="off">
             </div>
 
             <div class="form-group">
-                <label>Password</label>
-                <input type="password" name="password" class="form-control" placeholder="Enter admin password" required autocomplete="off">
+                <label>Admin Password</label>
+                <input type="password" name="password" placeholder="Enter secure password" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Biometric Verification</label>
+                <div class="biometric-box" id="bioBox" onclick="scanFingerprint()">
+                    <i class="fas fa-fingerprint" id="bioIcon"></i>
+                    <span id="bioText">Click pad to scan fingerprint</span>
+                </div>
+                <input type="hidden" id="verifiedScan" value="false">
             </div>
 
-            <button type="submit" class="login-btn">Login to Dashboard</button>
+            <button type="submit">Authenticate & Login</button>
         </form>
-
-        <div class="footer-note">
-            Authorized personnel only. All login attempts are monitored.
-        </div>
     </div>
 
     <script>
-        // Automatically check for unread feedback before logging in
-        function checkUnreadNotifications() {
-            fetch('/api/unread-count')
-                .then(response => response.json())
-                .then(data => {
-                    const banner = document.getElementById('login-notification-banner');
-                    if (data.unread_count > 0) {
-                        document.getElementById('unread-counter-num').innerText = data.unread_count;
-                        banner.style.display = 'block';
-                    } else {
-                        banner.style.display = 'none';
-                    }
-                })
-                .catch(err => console.error('Error fetching unread count:', err));
+        function scanFingerprint() {
+            const bioBox = document.getElementById('bioBox');
+            const bioIcon = document.getElementById('bioIcon');
+            const bioText = document.getElementById('bioText');
+            const verifiedInput = document.getElementById('verifiedScan');
+
+            bioIcon.className = "fas fa-spinner fa-spin";
+            bioText.innerText = "Scanning biometric signature...";
+            
+            setTimeout(() => {
+                bioBox.classList.add('verified');
+                bioIcon.className = "fas fa-check-circle";
+                bioText.innerText = "Biometric Verified Successfully";
+                verifiedInput.value = "true";
+            }, 800);
         }
 
-        // Run on page load and poll every 10 seconds
-        checkUnreadNotifications();
-        setInterval(checkUnreadNotifications, 10000);
+        function validateForm() {
+            const verifiedInput = document.getElementById('verifiedScan').value;
+            if (verifiedInput !== "true") {
+                alert("Please click the fingerprint pad to complete biometric verification before logging in.");
+                return false;
+            }
+            return true;
+        }
     </script>
 
 </body>

@@ -3,14 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f172a">
     <title>Federal Police - Service Categories & Sub-services</title>
+    
+    <!-- PWA Manifest Link -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Noto+Sans+Ethiopic:wght@400;700&display=swap" rel="stylesheet">
+    
     <style>
+        :root {
+            --bg-gradient: radial-gradient(circle at center, #172554, #0f172a, #020617);
+            --text-main: #ffffff;
+            --text-sub: #e2e8f0;
+            --glass-bg: rgba(15, 23, 42, 0.94);
+            --glass-border: rgba(251, 191, 36, 0.35);
+            --card-bg: linear-gradient(145deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.98));
+            --card-border: rgba(255, 255, 255, 0.12);
+            --card-hover-bg: linear-gradient(145deg, rgba(30, 58, 138, 0.9), rgba(15, 23, 42, 0.99));
+            --subcard-hover-bg: linear-gradient(145deg, rgba(37, 99, 235, 0.5), rgba(15, 23, 42, 0.99));
+            --audio-bg: rgba(15, 23, 42, 0.6);
+            --audio-border: rgba(30, 41, 59, 0.8);
+        }
+
+        body.light-mode {
+            --bg-gradient: radial-gradient(circle at center, #6cb0f5, #e2e8f0, #cbd5e1);
+            --text-main: #0f172a;
+            --text-sub: #334155;
+            --glass-bg: rgba(255, 255, 255, 0.92);
+            --glass-border: rgba(217, 119, 6, 0.4);
+            --card-bg: linear-gradient(145deg, #ffffff, #f1f5f9);
+            --card-border: rgba(0, 0, 0, 0.1);
+            --card-hover-bg: linear-gradient(145deg, #e0f2fe, #f0f9ff);
+            --subcard-hover-bg: linear-gradient(145deg, #dbeafe, #eff6ff);
+            --audio-bg: rgba(241, 245, 249, 0.8);
+            --audio-border: rgba(203, 213, 225, 0.8);
+        }
+
         body {
             font-family: 'Montserrat', 'Noto Sans Ethiopic', sans-serif;
-            background: radial-gradient(circle at center, #172554, #0f172a, #020617);
+            background: var(--bg-gradient);
             min-height: 100vh;
             overflow-x: hidden;
             margin: 0;
@@ -18,22 +52,25 @@
             flex-direction: column;
             align-items: center;
             justify-content: space-between;
-            color: white;
+            color: var(--text-main);
             padding: 24px;
+            transition: background 0.5s ease, color 0.5s ease;
+            position: relative;
         }
 
         .glass-panel {
-            background: rgba(15, 23, 42, 0.94);
+            background: var(--glass-bg);
             backdrop-filter: blur(30px);
-            border: 1px solid rgba(251, 191, 36, 0.35);
-            box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.98);
-            transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.3);
+            transition: all 0.5s ease;
+            position: relative;
         }
 
         .service-card {
-            background: linear-gradient(145deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.98));
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
             cursor: pointer;
             position: relative;
             overflow: hidden;
@@ -41,15 +78,15 @@
 
         .service-card:hover {
             transform: translateY(-6px) scale(1.02);
-            border-color: #fbbf24;
-            box-shadow: 0 20px 35px -10px rgba(251, 191, 36, 0.4);
-            background: linear-gradient(145deg, rgba(30, 58, 138, 0.9), rgba(15, 23, 42, 0.99));
+            border-color: #d97706;
+            box-shadow: 0 20px 35px -10px rgba(217, 119, 6, 0.3);
+            background: var(--card-hover-bg);
         }
 
         .sub-service-grid-item {
-            background: linear-gradient(145deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.98));
-            border: 1px solid rgba(251, 191, 36, 0.25);
-            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.8s cubic-bezier(0.16, 1, 0.3, 1), background 0.8s ease, border-color 0.8s ease;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease, background 0.5s ease, border-color 0.5s ease;
             cursor: pointer;
             position: relative;
             overflow: visible;
@@ -59,9 +96,9 @@
         .sub-service-grid-item:hover {
             transform: translateY(-8px) scale(1.04);
             z-index: 50;
-            border-color: #fbbf24;
-            box-shadow: 0 25px 50px -10px rgba(251, 191, 36, 0.5), 0 0 20px rgba(37, 99, 235, 0.6);
-            background: linear-gradient(145deg, rgba(37, 99, 235, 0.5), rgba(15, 23, 42, 0.99));
+            border-color: #d97706;
+            box-shadow: 0 25px 50px -10px rgba(217, 119, 6, 0.3), 0 0 20px rgba(37, 99, 235, 0.3);
+            background: var(--subcard-hover-bg);
         }
 
         .page-transition {
@@ -85,33 +122,57 @@
         }
 
         .voice-btn {
-            background: rgba(251, 191, 36, 0.1);
-            border: 1px solid rgba(251, 191, 36, 0.3);
-            color: #fbbf24;
+            background: rgba(217, 119, 6, 0.15);
+            border: 1px solid rgba(217, 119, 6, 0.4);
+            color: #d97706;
             padding: 6px 12px;
             border-radius: 8px;
             font-size: 11px;
-            font-weight: 600;
+            font-weight: 700;
             transition: all 0.3s ease;
             cursor: pointer;
         }
 
         .voice-btn:hover {
-            background: rgba(251, 191, 36, 0.25);
-            border-color: #fbbf24;
+            background: rgba(217, 119, 6, 0.3);
+            border-color: #b45309;
             transform: translateY(-2px);
+        }
+
+        .theme-toggle-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .theme-toggle-btn:hover {
+            transform: scale(1.05);
+            border-color: #fbbf24;
         }
     </style>
 </head>
 <body class="page-transition" id="body-wrapper">
-    
 
     <!-- Header Section -->
     <div class="text-center mt-2">
-        <h1 id="main-brand-title" class="text-2xl md:text-3xl font-extrabold tracking-wider text-amber-400 mb-1">
+        <h1 id="main-brand-title" class="text-2xl md:text-3xl font-extrabold tracking-wider text-amber-500 mb-1">
             Ethiopian Federal Police
         </h1>
-        <p id="exp-title" class="text-lg md:text-xl font-semibold text-gray-200 mb-2">
+        <p id="exp-title" class="text-lg md:text-xl font-semibold opacity-90 mb-2">
             How was your experience today?
         </p>
         <div class="text-amber-400 text-2xl space-x-1 star-glow">
@@ -125,105 +186,109 @@
 
     <!-- Main Content Panel -->
     <div class="glass-panel p-6 md:p-8 rounded-3xl w-full max-w-4xl my-4">
-        
+
+        <!-- Theme Toggle Switch -->
+        <button onclick="toggleTheme()" class="theme-toggle-btn" id="theme-btn" title="Toggle Theme">
+            <i class="fa-solid fa-moon text-amber-400" id="theme-icon"></i>
+            <span id="theme-text">Dark Mode</span>
+        </button>
+
         <!-- Main Categories View -->
-        <div id="main-categories-view" class="transition-all duration-700">
-            <h2 id="choose-service-title" class="text-xl md:text-2xl font-bold mb-6 text-center text-amber-300 tracking-wide">
+        <div id="main-categories-view" class="transition-all duration-700 pt-4">
+            <h2 id="choose-service-title" class="text-xl md:text-2xl font-bold mb-6 text-center text-amber-500 tracking-wide">
                 Please choose the service category
             </h2>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div onclick="showSubServices('clearance')" class="service-card p-4 rounded-2xl flex items-center space-x-4 group">
-                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-400 text-xl group-hover:bg-amber-400 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
+                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-500 text-xl group-hover:bg-amber-500 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
                         <i class="fa-solid fa-file-shield"></i>
                     </div>
                     <div class="flex-1">
-                        <h3 id="cat-1" class="text-base font-bold text-white group-hover:text-amber-300 transition-colors">Police Clearance</h3>
-                        <p id="desc-1" class="text-xs text-gray-400 mt-0.5">Criminal record & background checks</p>
+                        <h3 id="cat-1" class="text-base font-bold group-hover:text-amber-500 transition-colors">Police Clearance</h3>
+                        <p id="desc-1" class="text-xs opacity-70 mt-0.5">Criminal record & background checks</p>
                     </div>
-                    <i class="fa-solid fa-chevron-right text-gray-500 group-hover:text-amber-400 transition-transform duration-600 group-hover:translate-x-1"></i>
+                    <i class="fa-solid fa-chevron-right opacity-50 group-hover:text-amber-500 transition-transform duration-600 group-hover:translate-x-1"></i>
                 </div>
 
                 <div onclick="showSubServices('complaint')" class="service-card p-4 rounded-2xl flex items-center space-x-4 group">
-                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-400 text-xl group-hover:bg-amber-400 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
+                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-500 text-xl group-hover:bg-amber-500 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
                         <i class="fa-solid fa-scale-balanced"></i>
                     </div>
                     <div class="flex-1">
-                        <h3 id="cat-2" class="text-base font-bold text-white group-hover:text-amber-300 transition-colors">Complaint</h3>
-                        <p id="desc-2" class="text-xs text-gray-400 mt-0.5">Submit and track formal complaints</p>
+                        <h3 id="cat-2" class="text-base font-bold group-hover:text-amber-500 transition-colors">Complaint</h3>
+                        <p id="desc-2" class="text-xs opacity-70 mt-0.5">Submit and track formal complaints</p>
                     </div>
-                    <i class="fa-solid fa-chevron-right text-gray-500 group-hover:text-amber-400 transition-transform duration-600 group-hover:translate-x-1"></i>
+                    <i class="fa-solid fa-chevron-right opacity-50 group-hover:text-amber-500 transition-transform duration-600 group-hover:translate-x-1"></i>
                 </div>
 
                 <div onclick="showSubServices('hospital')" class="service-card p-4 rounded-2xl flex items-center space-x-4 group">
-                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-400 text-xl group-hover:bg-amber-400 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
+                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-500 text-xl group-hover:bg-amber-500 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
                         <i class="fa-solid fa-hospital-user"></i>
                     </div>
                     <div class="flex-1">
-                        <h3 id="cat-3" class="text-base font-bold text-white group-hover:text-amber-300 transition-colors">Hospital</h3>
-                        <p id="desc-3" class="text-xs text-gray-400 mt-0.5">Police medical & health coordination</p>
+                        <h3 id="cat-3" class="text-base font-bold group-hover:text-amber-500 transition-colors">Hospital</h3>
+                        <p id="desc-3" class="text-xs opacity-70 mt-0.5">Police medical & health coordination</p>
                     </div>
-                    <i class="fa-solid fa-chevron-right text-gray-500 group-hover:text-amber-400 transition-transform duration-600 group-hover:translate-x-1"></i>
+                    <i class="fa-solid fa-chevron-right opacity-50 group-hover:text-amber-500 transition-transform duration-600 group-hover:translate-x-1"></i>
                 </div>
-                
 
                 <div onclick="showSubServices('logistics')" class="service-card p-4 rounded-2xl flex items-center space-x-4 group">
-                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-400 text-xl group-hover:bg-amber-400 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
+                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-500 text-xl group-hover:bg-amber-500 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
                         <i class="fa-solid fa-truck-fast"></i>
                     </div>
                     <div class="flex-1">
-                        <h3 id="cat-4" class="text-base font-bold text-white group-hover:text-amber-300 transition-colors">Logistics</h3>
-                        <p id="desc-4" class="text-xs text-gray-400 mt-0.5">Vehicle, garage & equipment supply</p>
+                        <h3 id="cat-4" class="text-base font-bold group-hover:text-amber-500 transition-colors">Logistics</h3>
+                        <p id="desc-4" class="text-xs opacity-70 mt-0.5">Vehicle, garage & equipment supply</p>
                     </div>
-                    <i class="fa-solid fa-chevron-right text-gray-500 group-hover:text-amber-400 transition-transform duration-600 group-hover:translate-x-1"></i>
+                    <i class="fa-solid fa-chevron-right opacity-50 group-hover:text-amber-500 transition-transform duration-600 group-hover:translate-x-1"></i>
                 </div>
 
                 <div onclick="showSubServices('education')" class="service-card p-4 rounded-2xl flex items-center space-x-4 group">
-                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-400 text-xl group-hover:bg-amber-400 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
+                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-500 text-xl group-hover:bg-amber-500 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
                         <i class="fa-solid fa-graduation-cap"></i>
                     </div>
                     <div class="flex-1">
-                        <h3 id="cat-5" class="text-base font-bold text-white group-hover:text-amber-300 transition-colors">Education & Training</h3>
-                        <p id="desc-5" class="text-xs text-gray-400 mt-0.5">Academy registration & certificates</p>
+                        <h3 id="cat-5" class="text-base font-bold group-hover:text-amber-500 transition-colors">Education & Training</h3>
+                        <p id="desc-5" class="text-xs opacity-70 mt-0.5">Academy registration & certificates</p>
                     </div>
-                    <i class="fa-solid fa-chevron-right text-gray-500 group-hover:text-amber-400 transition-transform duration-600 group-hover:translate-x-1"></i>
+                    <i class="fa-solid fa-chevron-right opacity-50 group-hover:text-amber-500 transition-transform duration-600 group-hover:translate-x-1"></i>
                 </div>
 
                 <div onclick="showSubServices('other')" class="service-card p-4 rounded-2xl flex items-center space-x-4 group">
-                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-400 text-xl group-hover:bg-amber-400 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
+                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-500 text-xl group-hover:bg-amber-500 group-hover:text-slate-900 transition-all duration-600 shadow-inner">
                         <i class="fa-solid fa-circle-plus"></i>
                     </div>
                     <div class="flex-1">
-                        <h3 id="cat-6" class="text-base font-bold text-white group-hover:text-amber-300 transition-colors">Other</h3>
-                        <p id="desc-6" class="text-xs text-gray-400 mt-0.5">Reception, ICT, HR, Finance & Admin</p>
+                        <h3 id="cat-6" class="text-base font-bold group-hover:text-amber-500 transition-colors">Other</h3>
+                        <p id="desc-6" class="text-xs opacity-70 mt-0.5">Reception, ICT, HR, Finance & Admin</p>
                     </div>
-                    <i class="fa-solid fa-chevron-right text-gray-500 group-hover:text-amber-400 transition-transform duration-600 group-hover:translate-x-1"></i>
+                    <i class="fa-solid fa-chevron-right opacity-50 group-hover:text-amber-500 transition-transform duration-600 group-hover:translate-x-1"></i>
                 </div>
             </div>
         </div>
 
         <!-- Sub-Services View -->
-        <div id="sub-services-view" class="hidden opacity-0 transform translate-x-16 transition-all duration-700 ease-out">
-            <div class="flex items-center justify-between mb-5 border-b border-blue-800/50 pb-3">
-                <button onclick="backToCategories()" class="bg-blue-900/70 hover:bg-blue-800 text-amber-300 px-4 py-2 rounded-xl border border-amber-400/40 transition-all duration-500 flex items-center space-x-2 text-xs font-semibold shadow-md hover:scale-105">
+        <div id="sub-services-view" class="hidden opacity-0 transform translate-x-16 transition-all duration-700 ease-out pt-4">
+            <div class="flex items-center justify-between mb-5 border-b border-amber-500/20 pb-3 pr-28">
+                <button onclick="backToCategories()" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 px-4 py-2 rounded-xl border border-amber-500/40 transition-all duration-500 flex items-center space-x-2 text-xs font-semibold shadow-md hover:scale-105">
                     <i class="fa-solid fa-arrow-left"></i>
                     <span id="back-cat-btn">Back to Categories</span>
                 </button>
-                <h3 id="sub-category-heading" class="text-lg md:text-xl font-extrabold text-amber-400 tracking-wide">Sub-Services</h3>
+                <h3 id="sub-category-heading" class="text-lg md:text-xl font-extrabold text-amber-500 tracking-wide">Sub-Services</h3>
             </div>
             <div id="sub-services-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
             </div>
         </div>
-        
 
-        <!-- Integrated Audio Assistance / Voice Guide Section -->
-        <div class="mt-8 pt-5 border-t border-slate-800/80 bg-slate-900/60 p-4 rounded-2xl">
-            <p class="text-[11px] text-amber-300 font-bold uppercase tracking-wider text-center mb-3">Audio Assistance / የድምጽ እርዳታ</p>
+        <!-- Audio Assistance Section -->
+        <div class="mt-8 pt-5 border-t border-amber-500/20 rounded-2xl p-4" style="background: var(--audio-bg);">
+            <p class="text-[11px] text-amber-500 font-bold uppercase tracking-wider text-center mb-3">Audio Assistance / የድምጽ እርዳታ</p>
             <div class="flex flex-wrap items-center justify-center gap-2 voice-guide-container">
-                <button onclick="playVoiceGuide('Please choose the service category you would like to evaluate.', 'en')" class="voice-btn">
+                <button onclick="playEnglishVoiceGuide()" class="voice-btn">
                     🔊 English Guide
                 </button>
-                <button onclick="playVoiceGuide('እባክዎ መገምገም የሚፈልጉትን የአገልግሎት ዓይነት ይምረጡ።', 'am')" class="voice-btn">
+                <button onclick="playAmharicVoiceGuide()" class="voice-btn">
                     🔊 አማርኛ መመሪያ
                 </button>
                 <button onclick="playVoiceGuide('Maaloo tajaajila gamaaggamuu barbaaddan filadhaa.', 'om')" class="voice-btn">
@@ -239,24 +304,76 @@
 
     <!-- Footer Controls -->
     <div class="w-full max-w-4xl flex justify-between items-center px-2">
-        <button onclick="goBack()" class="bg-slate-800 hover:bg-slate-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl border border-slate-600 transition-all duration-500 flex items-center space-x-2 shadow-md hover:scale-105 text-sm">
+        <button onclick="goBack()" class="service-card font-semibold px-5 py-2.5 rounded-xl transition-all duration-500 flex items-center space-x-2 shadow-md hover:scale-105 text-sm">
             <i class="fa-solid fa-arrow-left"></i>
             <span id="back-btn">Back</span>
         </button>
-        <div class="text-xs text-gray-400 tracking-wider uppercase font-medium">
-            Federal Police Kiosk v4.5 - Screen Pop Motion Edition
+        <div class="text-xs opacity-60 tracking-wider uppercase font-medium">
+            Federal Police Kiosk v4.5
         </div>
     </div>
 
     <script>
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered successfully:', reg.scope))
+                    .catch(err => console.error('Service Worker registration failed:', err));
+            });
+        }
+
+        // Online / Offline Status Checker
+        function updateOnlineStatus() {
+            const banner = document.getElementById('offline-banner');
+            if (banner) {
+                if (!navigator.onLine) {
+                    banner.classList.remove('hidden');
+                } else {
+                    banner.classList.add('hidden');
+                }
+            }
+        }
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+
+        // Page Load & Saved Theme Restorer
         window.addEventListener('DOMContentLoaded', () => {
+            updateOnlineStatus();
+            const savedTheme = localStorage.getItem('kiosk-theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+                document.getElementById('theme-icon').className = "fa-solid fa-sun text-amber-500";
+                document.getElementById('theme-text').innerText = "Light Mode";
+            }
             setTimeout(() => {
                 document.getElementById('body-wrapper').classList.add('active');
             }, 150);
         });
 
-        const currentLang = "{{ lang }}" || "en";
-        
+        // Toggle Dark / Light Theme Functionality
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.getElementById('theme-icon');
+            const themeText = document.getElementById('theme-text');
+
+            body.classList.toggle('light-mode');
+
+            if (body.classList.contains('light-mode')) {
+                themeIcon.className = "fa-solid fa-sun text-amber-500";
+                themeText.innerText = "Light Mode";
+                localStorage.setItem('kiosk-theme', 'light');
+            } else {
+                themeIcon.className = "fa-solid fa-moon text-amber-400";
+                themeText.innerText = "Dark Mode";
+                localStorage.setItem('kiosk-theme', 'dark');
+            }
+        }
+
+        // Safely determine active language
+        const flaskLang = "{{ lang if lang else '' }}";
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentLang = flaskLang || urlParams.get('lang') || 'en';
 
         const translations = {
             en: {
@@ -311,7 +428,7 @@
                 c2: "Komii",
                 d2: "Komii dhiyeeffachuu fi hordofuu",
                 c3: "Hospitaala",
-                d3: "Qindoomina fayyaa fi wal'اansa",
+                d3: "Qindoomina fayyaa fi wal'aansa",
                 c4: "Lojistiiksii",
                 d4: "Geejjibaa, gaarajii fi dhiyeessii meeshaalee",
                 c5: "Barnootaa fi Leenjii",
@@ -340,7 +457,6 @@
                 d6: "ሬሴፕሽን፣ ሓገዝ ICT፣ HRን ፋይናንስን"
             }
         };
-        
 
         const departmentsData = {
             clearance: {
@@ -384,7 +500,6 @@
                 ]
             },
             education: {
-                
                 title: { en: "Education & Training", am: "ትምህርት እና ስልጠና", om: "Barnootaa fi Leenjii", ti: "ትምህርትን ስልጠናን" },
                 items: [
                     { id: "student_reg", icon: "fa-user-plus", name: { en: "Student Registration", am: "ተማሪዎች ምዝገባ", om: "Galmee Barattootaa", ti: "ምዝገባ ተማሃሮ" } },
@@ -406,6 +521,7 @@
             }
         };
 
+        // Apply dynamic translation based on selected language
         const t = translations[currentLang] || translations['en'];
 
         document.getElementById('main-brand-title').innerText = t.brand;
@@ -419,6 +535,7 @@
             document.getElementById(`desc-${i}`).innerText = t[`d${i}`];
         }
 
+        // View Switcher: Show Sub-Services
         function showSubServices(categoryKey) {
             const catData = departmentsData[categoryKey];
             if (!catData) return;
@@ -435,17 +552,16 @@
                 card.className = "sub-service-grid-item p-4 rounded-2xl flex items-center space-x-4 group opacity-0 transform translate-x-10 transition-all duration-700 ease-out";
                 card.style.transitionDelay = `${index * 100}ms`;
                 card.onclick = () => selectSubService(categoryKey, sub.id);
-                
 
                 card.innerHTML = `
-                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-400 text-xl group-hover:bg-amber-400 group-hover:text-slate-900 transition-all duration-500 shadow-inner flex-shrink-0">
+                    <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-500 text-xl group-hover:bg-amber-500 group-hover:text-slate-900 transition-all duration-500 shadow-inner flex-shrink-0">
                         <i class="fa-solid ${sub.icon}"></i>
                     </div>
                     <div class="flex-1">
-                        <h4 class="text-base font-bold text-white group-hover:text-amber-300 transition-colors tracking-wide">${subName}</h4>
-                        <p class="text-xs text-gray-400 mt-0.5">${t.subHint}</p>
+                        <h4 class="text-base font-bold group-hover:text-amber-500 transition-colors tracking-wide">${subName}</h4>
+                        <p class="text-xs opacity-70 mt-0.5">${t.subHint}</p>
                     </div>
-                    <i class="fa-solid fa-chevron-right text-gray-500 group-hover:text-amber-400 transition-transform duration-500 group-hover:translate-x-1"></i>
+                    <i class="fa-solid fa-chevron-right opacity-50 group-hover:text-amber-500 transition-transform duration-500 group-hover:translate-x-1"></i>
                 `;
                 container.appendChild(card);
             });
@@ -473,6 +589,7 @@
             }, 500);
         }
 
+        // View Switcher: Back to Main Categories
         function backToCategories() {
             const mainView = document.getElementById('main-categories-view');
             const subView = document.getElementById('sub-services-view');
@@ -489,6 +606,7 @@
             }, 500);
         }
 
+        // Action: Select Sub-Service and redirect to feedback form
         function selectSubService(category, subServiceId) {
             document.getElementById('body-wrapper').style.opacity = '0';
             document.getElementById('body-wrapper').style.transform = 'scale(1.03)';
@@ -497,6 +615,7 @@
             }, 700);
         }
 
+        // Action: Back to Welcome Page
         function goBack() {
             document.getElementById('body-wrapper').style.opacity = '0';
             setTimeout(() => {
@@ -509,12 +628,38 @@
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = lang === 'am' ? 'am-ET' : (lang === 'om' ? 'om-ET' : (lang === 'ti' ? 'ti-ET' : 'en-US'));
+                utterance.lang = lang === 'am' ? 'am-ET' : (lang === 'om' ? 'om-ET' : (lang === 'ti' ? 'ti-ER' : 'en-US'));
+                utterance.rate = 0.9;
                 window.speechSynthesis.speak(utterance);
             } else {
-                alert('Speech synthesis is not supported in this browser.');
+                console.warn('Speech synthesis is not supported in this browser.');
             }
         }
+
+        // Full UI Reader for English Guide
+        function playEnglishVoiceGuide() {
+            let guideText = "Welcome to Ethiopian Federal Police Citizen Feedback System. Please choose the service category you received today.";
+            playVoiceGuide(guideText, 'en');
+        }
+
+        // Full UI Reader for Amharic Guide
+        function playAmharicVoiceGuide() {
+            let guideText = "እንኳን ወደ ኢትዮጵያ ፌዴራል ፖሊስ የህዝብ አስተያየት መስጫ በደህና መጡ። እባክዎ ዛሬ ያገኙትን የአገልግሎት ዘርፍ ይምረጡ።";
+            playVoiceGuide(guideText, 'am');
+        }
     </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ethiopian Federal Police - Citizen Feedback System</title>
+    <!-- Correct Flask static file referencing -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Your content here -->
 </body>
 </html>

@@ -27,7 +27,9 @@ body {
   line-height: 1.6;
 }
 
-/* Header & Navigation Styling */
+/* ==========================================
+   Header & Navigation Styling (Global)
+   ========================================== */
 header {
   background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
   color: var(--white);
@@ -73,14 +75,15 @@ nav ul li a:hover {
   color: var(--accent-gold);
 }
 
-/* Main Container Layout */
+/* ==========================================
+   Main Containers & Standard Cards
+   ========================================== */
 .container {
   max-width: 1100px;
   margin: 40px auto;
   padding: 0 20px;
 }
 
-/* Cards & Content Panels */
 .card {
   background: var(--white);
   border-radius: 8px;
@@ -98,7 +101,9 @@ nav ul li a:hover {
   padding-bottom: 10px;
 }
 
-/* Form Styling */
+/* ==========================================
+   Form Styling
+   ========================================== */
 .form-group {
   margin-bottom: 20px;
 }
@@ -129,7 +134,9 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15);
 }
 
-/* Official Action Buttons */
+/* ==========================================
+   Official Action Buttons
+   ========================================== */
 button, .btn {
   background-color: var(--primary-color);
   color: var(--white);
@@ -164,7 +171,9 @@ button:active, .btn:active {
   color: var(--white);
 }
 
-/* Tables for Dashboards and Records */
+/* ==========================================
+   Tables for Dashboards and Records
+   ========================================== */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -190,7 +199,38 @@ table tr:hover {
   background-color: #f8f9fa;
 }
 
-/* Footer Design */
+/* ==========================================
+   Biometric & QR Side-by-Side View (Dark Theme)
+   ========================================== */
+.main-container {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 30px;
+  padding: 40px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.bio-card {
+  background-color: #111b2d;
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  padding: 30px;
+  width: 450px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.qr-image-box img {
+  width: 200px;
+  height: 200px;
+  display: block;
+  margin: 20px auto;
+}
+
+/* ==========================================
+   Footer Design
+   ========================================== */
 footer {
   text-align: center;
   padding: 25px;

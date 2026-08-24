@@ -4,97 +4,253 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ethiopian Federal Police - Citizen Feedback System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@700;900&family=Montserrat:wght@500;700;800&family=Noto+Sans+Ethiopic:wght@400;700&display=swap" rel="stylesheet">
+    
     <style>
+        :root {
+            --bg-gradient: radial-gradient(circle at center, #0f172a, #090d16, #020408);
+            --card-bg: rgba(15, 23, 42, 0.95);
+            --card-border: rgba(251, 191, 36, 0.4);
+            --card-shadow: 0 30px 60px rgba(0, 0, 0, 0.9), 0 0 40px rgba(251, 191, 36, 0.1);
+            --text-main: #ffffff;
+            --text-sub: #cbd5e1;
+            --header-border: #1e293b;
+            --lang-card-bg: linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95));
+            --lang-card-border: rgba(251, 191, 36, 0.3);
+            --lang-card-hover: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(251, 191, 36, 0.18));
+            --lang-text-main: #fbbf24;
+            --lang-text-sub: #cbd5e1;
+            --default-card-bg: rgba(251, 191, 36, 0.15);
+            --default-card-border: rgba(251, 191, 36, 0.6);
+            --section-box-bg: rgba(15, 23, 42, 0.6);
+            --section-box-border: #1e293b;
+            --theme-btn-bg: rgba(255, 255, 255, 0.1);
+            --theme-btn-text: #fbbf24;
+            --theme-btn-border: rgba(251, 191, 36, 0.4);
+            --voice-btn-bg: rgba(251, 191, 36, 0.1);
+            --voice-btn-border: rgba(251, 191, 36, 0.3);
+            --voice-btn-text: #fbbf24;
+            --title-color-start: #fff7ed;
+            --title-color-mid: #fbbf24;
+            --title-color-end: #b45309;
+            --title-drop-shadow: rgba(251, 191, 36, 0.4);
+            --subtitle-color: #f59e0b;
+        }
+
+        body.light-theme {
+            --bg-gradient: linear-gradient(135deg, #fbfdff 0%, #f2f6fc 100%);
+            --card-bg: #ffffff;
+            --card-border: #cbd5e1;
+            --card-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.08);
+            --text-main: #0f172a;
+            --text-sub: #475569;
+            --header-border: #f1f5f9;
+            --lang-card-bg: #ffffff;
+            --lang-card-border: #e2e8f0;
+            --lang-card-hover: linear-gradient(135deg, #fffbeb, #fef3c7);
+            --lang-text-main: #1e293b;
+            --lang-text-sub: #64748b;
+            --default-card-bg: #fef3c7;
+            --default-card-border: #f59e0b;
+            --section-box-bg: #f8fafc;
+            --section-box-border: #e2e8f0;
+            --theme-btn-bg: #f1f5f9;
+            --theme-btn-text: #d97706;
+            --theme-btn-border: #cbd5e1;
+            --voice-btn-bg: #ffffff;
+            --voice-btn-border: #cbd5e1;
+            --voice-btn-text: #334155;
+            --title-color-start: #0f172a;
+            --title-color-mid: #1e293b;
+            --title-color-end: #b45309;
+            --title-drop-shadow: rgba(180, 83, 9, 0.15);
+            --subtitle-color: #b45309;
+        }
+
         body {
             font-family: 'Montserrat', 'Noto Sans Ethiopic', sans-serif;
-            background: radial-gradient(circle at center, #0f172a, #090d16, #020408);
+            background: var(--bg-gradient);
             min-height: 100vh;
-            color: white;
+            color: var(--text-main);
             margin: 0;
             padding: 20px;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            transition: background 0.4s ease, color 0.4s ease;
+            box-sizing: border-box;
         }
 
-        .glass-card {
-            background: rgba(15, 23, 42, 0.95);
+        .main-card {
+            background: var(--card-bg);
             backdrop-filter: blur(25px);
-            border: 1px solid rgba(251, 191, 36, 0.4);
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9), 0 0 40px rgba(251, 191, 36, 0.1);
+            border: 1px solid var(--card-border);
+            box-shadow: var(--card-shadow);
+            width: 100%;
+            max-width: 768px;
+            padding: 30px;
+            border-radius: 24px;
+            position: relative;
+            box-sizing: border-box;
+            transition: background 0.4s ease, border-color 0.4s ease;
         }
 
-        .creative-header-font {
+        .theme-btn-container {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+        }
+
+        .theme-toggle-btn {
+            background: var(--theme-btn-bg);
+            border: 1px solid var(--theme-btn-border);
+            color: var(--theme-btn-text);
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header-section {
+            text-align: center;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--header-border);
+            padding-top: 10px;
+        }
+
+        .logo-img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            margin: 0 auto 16px auto;
+            display: block;
+        }
+
+        .header-title {
             font-family: 'Cinzel Decorative', 'Cinzel', serif;
-            background: linear-gradient(to bottom, #fff7ed 0%, #fbbf24 50%, #b45309 100%);
+            background: linear-gradient(to bottom, var(--title-color-start) 0%, var(--title-color-mid) 50%, var(--title-color-end) 100%);
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 4px 12px rgba(251, 191, 36, 0.4));
-            letter-spacing: 1px;
+            font-size: 24px;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin: 0 0 4px 0;
+            filter: drop-shadow(0 4px 12px var(--title-drop-shadow));
+        }
+
+        .header-subtitle {
+            font-size: 13px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--subtitle-color);
+            margin: 0;
+        }
+
+        .instruction-text {
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            color: var(--text-sub);
+            letter-spacing: 0.5px;
+        }
+
+        .lang-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 540px) {
+            .lang-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .lang-card {
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95));
-            border: 1px solid rgba(251, 191, 36, 0.3);
+            background: var(--lang-card-bg);
+            border: 1px solid var(--lang-card-border);
             border-radius: 16px;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-            overflow: hidden;
+            padding: 16px;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+            transition: all 0.35s ease;
         }
 
-        .lang-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -150%;
-            width: 150%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.25), transparent);
-            transition: 0.7s ease-in-out;
-        }
-
-        .lang-card:hover::before {
-            left: 150%;
+        .lang-card-default {
+            background: var(--default-card-bg) !important;
+            border-color: var(--default-card-border) !important;
         }
 
         .lang-card:hover {
-            transform: translateY(-8px) scale(1.03);
+            transform: translateY(-4px);
             border-color: #fbbf24;
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(251, 191, 36, 0.18));
-            box-shadow: 0 18px 40px rgba(251, 191, 36, 0.35), 0 0 20px rgba(251, 191, 36, 0.2);
+            background: var(--lang-card-hover);
+            box-shadow: 0 12px 24px rgba(251, 191, 36, 0.2);
         }
 
-        @keyframes logoGlow {
-            0%, 100% { filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6)); transform: scale(1); }
-            50% { filter: drop-shadow(0 0 35px rgba(251, 191, 36, 0.9)); transform: scale(1.03); }
+        .lang-card .main-lbl {
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--lang-text-main);
+            display: block;
+            margin-bottom: 2px;
         }
 
-        .logo-graphic {
-            animation: logoGlow 4s ease-in-out infinite;
+        .lang-card .sub-lbl {
+            font-size: 11px;
+            color: var(--lang-text-sub);
         }
 
-        .qr-container {
-            background: white;
-            padding: 8px;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            display: inline-block;
+        .voice-section {
+            background: var(--section-box-bg);
+            border: 1px solid var(--section-box-border);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .voice-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+            margin-bottom: 12px;
+            color: var(--subtitle-color);
+        }
+
+        .voice-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
         }
 
         .voice-btn {
-            background: rgba(251, 191, 36, 0.1);
-            border: 1px solid rgba(251, 191, 36, 0.3);
-            color: #fbbf24;
-            padding: 6px 12px;
+            background: var(--voice-btn-bg);
+            border: 1px solid var(--voice-btn-border);
+            color: var(--voice-btn-text);
+            padding: 8px 14px;
             border-radius: 8px;
             font-size: 11px;
-            font-weight: 600;
-            transition: all 0.3s ease;
+            font-weight: 700;
             cursor: pointer;
+            transition: all 0.3s ease;
         }
 
         .voice-btn:hover {
@@ -102,106 +258,122 @@
             border-color: #fbbf24;
             transform: translateY(-2px);
         }
+
+        .footer-section {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--header-border);
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-sub);
+        }
     </style>
 </head>
 <body>
 
-    <div class="glass-card max-w-3xl w-full p-8 md:p-10 rounded-3xl shadow-2xl relative">
+    <div class="main-card">
         
-        <!-- Header Section with Enhanced Logo & Creative Title Font -->
-        <div class="flex flex-col items-center text-center mb-6 pb-6 border-b border-slate-800">
-            <div class="w-20 h-20 mb-4 flex items-center justify-center">
-                <img src="{{ url_for('static', filename='images/police_logo.png') }}" alt="Federal Police Logo" class="max-h-full max-w-full object-contain logo-graphic" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/2/2b/Emblem_of_Ethiop3.png'">
-            </div>
-            <h1 class="creative-header-font text-2xl md:text-3xl font-black uppercase mb-1">
-                Ethiopian Federal Police
-            </h1>
-            <p class="text-xs md:text-sm text-amber-300/90 tracking-widest uppercase font-bold">
-                Citizen Feedback System
-            </p>
+        <div class="theme-btn-container">
+            <button onclick="toggleTheme()" id="theme-toggle" class="theme-toggle-btn" type="button">
+                <i class="fa-solid fa-moon" id="theme-icon"></i>
+                <span id="theme-text">Dark Mode</span>
+            </button>
         </div>
 
-        <!-- Language Selection Section -->
-        <div class="mb-6">
-            <p class="text-xs text-gray-300 font-semibold text-center mb-4 tracking-wide uppercase">
-                Please select your preferred language to begin:
-            </p>
+        <div class="header-section">
+            <img src="{{ url_for('static', filename='images/police_logo.png') }}" alt="Federal Police Logo" class="logo-img" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/2/2b/Emblem_of_Ethiop3.png'">
+            <h1 class="header-title">Ethiopian Federal Police</h1>
+            <p class="header-subtitle">Citizen Feedback System</p>
+        </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <a href="/services?lang=en" class="lang-card p-4 text-center group block border-amber-500/60 bg-amber-500/15">
-                    <span class="font-bold text-sm text-amber-300 group-hover:text-amber-400 block tracking-wide transition-transform duration-300 group-hover:scale-105">English</span>
-                    <span class="text-[11px] text-amber-400/80 font-semibold">Default Language</span>
+        <div>
+            <p class="instruction-text">Please select your preferred language to begin :</p>
+
+            <div class="lang-grid">
+                <a href="{{ url_for('services', lang='en') }}" class="lang-card lang-card-default">
+                    <span class="main-lbl" style="color: #fbbf24;">English</span>
+                    <span class="sub-lbl">Default Language</span>
                 </a>
 
-                <a href="/services?lang=am" class="lang-card p-4 text-center group block">
-                    <span class="font-bold text-sm text-amber-300 group-hover:text-amber-400 block tracking-wide transition-transform duration-300 group-hover:scale-105">አማርኛ</span>
-                    <span class="text-[11px] text-gray-400 font-medium">Amharic</span>
+                <a href="{{ url_for('services', lang='am') }}" class="lang-card">
+                    <span class="main-lbl">አማርኛ</span>
+                    <span class="sub-lbl">Amharic</span>
                 </a>
 
-                <a href="/services?lang=om" class="lang-card p-4 text-center group block">
-                    <span class="font-bold text-sm text-amber-300 group-hover:text-amber-400 block tracking-wide transition-transform duration-300 group-hover:scale-105">Afaan Oromoo</span>
-                    <span class="text-[11px] text-gray-400 font-medium">Oromic</span>
+                <a href="{{ url_for('services', lang='om') }}" class="lang-card">
+                    <span class="main-lbl">Afaan Oromoo</span>
+                    <span class="sub-lbl">Oromic</span>
                 </a>
 
-                <a href="/services?lang=ti" class="lang-card p-4 text-center group block">
-                    <span class="font-bold text-sm text-amber-300 group-hover:text-amber-400 block tracking-wide transition-transform duration-300 group-hover:scale-105">ትግርኛ</span>
-                    <span class="text-[11px] text-gray-400 font-medium">Tigrigna</span>
+                <a href="{{ url_for('services', lang='ti') }}" class="lang-card">
+                    <span class="main-lbl">ትግርኛ</span>
+                    <span class="sub-lbl">Tigrigna</span>
                 </a>
             </div>
         </div>
 
-        <!-- Voice Guide Section -->
-        <div class="mb-6 p-4 bg-slate-900/60 border border-slate-800 rounded-2xl">
-            <p class="text-[11px] text-amber-300 font-bold uppercase tracking-wider text-center mb-3">Audio Assistance / የድምጽ እርዳታ</p>
-            <div class="flex flex-wrap items-center justify-center gap-2 voice-guide-container">
-                <button onclick="playVoiceGuide('Welcome to the Ethiopian Federal Police Citizen Feedback System. Please select your language to begin.', 'en')" class="voice-btn">
-                    🔊 English
-                </button>
-                <button onclick="playVoiceGuide('እንኳን ወደ ኢትዮጵያ ፌዴራል ፖሊስ የህዝብ አስተያየት መስጫ ስርዓት በደህና መጡ።', 'am')" class="voice-btn">
-                    🔊 አማርኛ
-                </button>
-                <button onclick="playVoiceGuide('Baga nagaan dhuftan Sistema yaada kennisa Poolisii Federaalaa Itoophiyaa.', 'om')" class="voice-btn">
-                    🔊 Afaan Oromoo
-                </button>
-                <button onclick="playVoiceGuide('ናብ ስርዓት ርእይቶ ህዝቢ ፌደራል ፖሊስ ኢትዮጵያ ብሰላም መጻእኩም።', 'ti')" class="voice-btn">
-                    🔊 ትግርኛ
-                </button>
+        <div class="voice-section">
+            <p class="voice-title">Audio Assistance / የድምጽ እርዳታ</p>
+            <div class="voice-buttons">
+                <button onclick="readFullPageEnglish()" class="voice-btn" type="button">🔊 English</button>
+                <button onclick="playVoiceGuide('እንኳን ወደ ኢትዮጵያ ፌዴራል ፖሊስ የህዝብ አስተያየት መስጫ ስርዓት በደህና መጡ።', 'am')" class="voice-btn" type="button">🔊 አማርኛ</button>
+                <button onclick="playVoiceGuide('Baga nagaan dhuftan Sistema yaada kennisa Poolisii Federaalaa Itoophiyaa.', 'om')" class="voice-btn" type="button">🔊 Afaan Oromoo</button>
+                <button onclick="playVoiceGuide('ናብ ስርዓት ርእይቶ ህዝቢ ፌደራል ፖሊስ ኢትዮጵያ ብሰላም መጻእኩም።', 'ti')" class="voice-btn" type="button">🔊 ትግርኛ</button>
             </div>
         </div>
 
-        <!-- QR Code Section -->
-        <div class="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-center gap-4 shadow-inner">
-            <div class="qr-container">
-                <img src="{{ url_for('static', filename='images/project_qr.png') }}" alt="Project QR Code" class="w-16 h-16 object-contain" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=127.0.0.1:5000'">
-            </div>
-            <div class="text-center sm:text-left">
-                <h3 class="text-xs font-extrabold text-amber-300 mb-1 uppercase tracking-wider">Scan to Evaluate on Mobile</h3>
-                <p class="text-[11px] text-gray-400 leading-relaxed max-w-sm">
-                    Use your smartphone camera to quickly scan and submit your feedback directly from your mobile device.
-                </p>
-            </div>
-        </div>
-
-        <!-- Footer Section -->
-        <div class="mt-6 pt-4 border-t border-slate-800/80 text-center text-xs text-gray-500">
-            <span>Ethiopian Federal Police © 2026</span>
+        <div class="footer-section">
+            <span>Ethiopian Federal Police &copy; 2026</span>
         </div>
 
     </div>
 
     <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('welcome-theme');
+            if (savedTheme === 'light') {
+                applyLightTheme();
+            }
+        });
+
+        function toggleTheme() {
+            const isLight = document.body.classList.contains('light-theme');
+            if (isLight) {
+                applyDarkTheme();
+            } else {
+                applyLightTheme();
+            }
+        }
+
+        function applyLightTheme() {
+            document.body.classList.add('light-theme');
+            document.getElementById('theme-icon').className = 'fa-solid fa-sun';
+            document.getElementById('theme-text').innerText = 'Light Mode';
+            localStorage.setItem('welcome-theme', 'light');
+        }
+
+        function applyDarkTheme() {
+            document.body.classList.remove('light-theme');
+            document.getElementById('theme-icon').className = 'fa-solid fa-moon';
+            document.getElementById('theme-text').innerText = 'Dark Mode';
+            localStorage.setItem('welcome-theme', 'dark');
+        }
+
         function playVoiceGuide(text, lang) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = lang === 'am' ? 'am-ET' : 
-                               (lang === 'om' ? 'om-ET' : 
-                               (lang === 'ti' ? 'ti-ER' : 'en-US'));
+                                 (lang === 'om' ? 'om-ET' : 
+                                 (lang === 'ti' ? 'ti-ER' : 'en-US'));
                 utterance.rate = 0.9;
                 window.speechSynthesis.speak(utterance);
-            } else {
-                console.warn('Speech synthesis is not supported in this browser.');
             }
+        }
+
+        function readFullPageEnglish() {
+            const fullText = "Welcome to the Ethiopian Federal Police Citizen Feedback System. Please select your preferred language to begin.";
+            playVoiceGuide(fullText, 'en');
         }
     </script>
 </body>

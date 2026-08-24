@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biometric Authentication | Ethiopian Federal Police</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Fingerprint Icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #030712;
+            color: #ffffff;
+            position: relative;
+            overflow-x: hidden;
+            padding: 40px 20px;
+        }
+
+        /* Background Blur Overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -15px;
+            left: -15px;
+            width: calc(100% + 30px);
+            height: calc(100% + 30px);
+            background-image: url("{{ url_for('static', filename='images/background.png') }}");
+            background-repeat: repeat;
+            background-position: center center;
+            background-size: 520px;
+            filter: blur(14px) brightness(0.45);
+            -webkit-filter: blur(14px) brightness(0.45);
+            z-index: -1;
+        }
+
+        /* Top Header Navbar */
+        .top-navbar {
+            position: absolute;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            z-index: 10;
+        }
+
+        .header-logo {
+            height: 72px;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.9));
+        }
+
+        .header-text {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+
+        .header-title {
+            color: #d97706;
+            font-weight: 800;
+            font-size: 1.35rem;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+        }
+
+        .header-subtitle {
+            color: #3b82f6;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-top: 2px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+        }
+
+        /* Side-by-Side Flex Container */
+        .main-container {
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            gap: 30px;
+            width: 100%;
+            max-width: 960px;
+            margin-top: 70px;
+            z-index: 2;
+        }
+
+        /* Unified Glassmorphic Card Styling */
+        .auth-card {
+            background: rgba(10, 15, 28, 0.75);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 24px;
+            flex: 1;
+            padding: 42px 32px;
+            text-align: center;
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 12px;
+        }
+
+        .card-subtitle {
+            color: #94a3b8;
+            font-size: 0.88rem;
+            line-height: 1.5;
+            margin-bottom: 30px;
+        }
+
+        /* Scanner Pad Box */
+        .scanner-box {
+            width: 140px;
+            height: 160px;
+            margin: 0 auto 25px auto;
+            background: rgba(4, 8, 18, 0.9);
+            border: 2px solid #00b4d8;
+            border-radius: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 25px rgba(0, 180, 216, 0.4), inset 0 0 15px rgba(0, 180, 216, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .scanner-box:hover {
+            border-color: #00e5ff;
+            box-shadow: 0 0 35px rgba(0, 229, 255, 0.6), inset 0 0 20px rgba(0, 229, 255, 0.3);
+            transform: scale(1.02);
+        }
+
+        /* Laser Scan Beam Animation */
+        .scanner-box.scanning::after {
+            content: '';
+            position: absolute;
+            top: -40px;
+            left: 0;
+            width: 100%;
+            height: 40px;
+            background: linear-gradient(to bottom, rgba(0, 229, 255, 0), rgba(0, 229, 255, 0.75));
+            border-bottom: 2px solid #00e5ff;
+            box-shadow: 0 0 18px #00e5ff;
+            animation: scanMove 1.2s ease-in-out infinite;
+        }
+
+        @keyframes scanMove {
+            0% { top: -40px; }
+            50% { top: 100%; }
+            100% { top: -40px; }
+        }
+
+        .fingerprint-icon {
+            font-size: 82px;
+            color: #00e5ff;
+            filter: drop-shadow(0 0 12px rgba(0, 229, 255, 0.9));
+        }
+
+        /* Sensor Pill Button */
+        .sensor-btn {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 50px;
+            padding: 10px 22px;
+            color: #cbd5e1;
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .sensor-btn:hover {
+            background: rgba(30, 41, 59, 0.8);
+            color: #ffffff;
+        }
+
+        /* QR Card Styles */
+        .qr-image-wrapper {
+            background: #ffffff;
+            padding: 12px;
+            border-radius: 14px;
+            display: inline-block;
+            margin: 15px auto;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .qr-code-img {
+            width: 150px;
+            height: 150px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .qr-footer-text {
+            color: #38bdf8;
+            font-size: 0.78rem;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+        /* Responsive Breakpoint for Mobile */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .auth-card {
+                width: 100%;
+                max-width: 440px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Header -->
+    <div class="top-navbar">
+        <img src="{{ url_for('static', filename='images/police_logo.png') }}" alt="Federal Police Logo" class="header-logo">
+        <div class="header-text">
+            <span class="header-title">ETHIOPIAN FEDERAL POLICE</span>
+            <span class="header-subtitle">Citizen Feedback & Kiosk Verification System</span>
+        </div>
+    </div>
+
+    <!-- Main Side-by-Side Container -->
+    <div class="main-container">
+        
+        <!-- Left Card: Biometric Authentication -->
+        <div class="auth-card">
+            <div>
+                <h1 class="card-title">Biometric Authentication</h1>
+                <p class="card-subtitle">Please place your thumb or finger on the scanner pad below</p>
+
+                <!-- Fingerprint Scanner Box -->
+                <div class="scanner-box" id="scannerBox" onclick="scanFingerprint()">
+                    <i class="fa-solid fa-fingerprint fingerprint-icon"></i>
+                </div>
+            </div>
+
+            <!-- Sensor Info Pill Button -->
+            <button class="sensor-btn" onclick="scanFingerprint()">
+                <span>👇</span>
+                <span>Touch pad or place finger on physical sensor</span>
+            </button>
+        </div>
+
+        <!-- Right Card: Instant Mobile QR Access -->
+        <div class="auth-card">
+            <div>
+                <h2 class="card-title">Instant Mobile QR Access</h2>
+                <p class="card-subtitle">Scan this QR code with your smartphone camera to open the feedback portal instantly.</p>
+
+                <!-- QR Image Box -->
+                <div class="qr-image-wrapper">
+                    <img src="{{ url_for('static', filename='images/project_qr.png') }}" alt="Scan QR Code" class="qr-code-img">
+                </div>
+            </div>
+
+            <p class="qr-footer-text">ℹ️ Direct mobile browser redirection</p>
+        </div>
+
+    </div>
+
+    <script>
+        function scanFingerprint() {
+            const scannerBox = document.getElementById('scannerBox');
+            scannerBox.classList.add('scanning');
+
+            setTimeout(() => {
+                fetch('/api/fingerprint/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: 'GUEST_USER', fingerprint_data: 'SAMPLE_HASH' })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    window.location.href = '/welcome';
+                })
+                .catch(err => {
+                    window.location.href = '/welcome';
+                });
+            }, 1200);
+        }
+    </script>
+</body>
+</html>

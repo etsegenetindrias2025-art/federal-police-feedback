@@ -1,0 +1,89 @@
+<!-- Record Audio Section -->
+<div class="audio-record-section">
+    <button type="button" id="recordBtn" onclick="toggleRecording()" class="record-btn">
+        <i class="fa-solid fa-microphone"></i> Start Recording Feedback
+    </button>
+    <span id="recordingStatus" style="margin-left: 10px; font-size: 13px; color: #9ca3af;"></span>
+</div>
+
+<script>
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+    let recordedAudioBlob = null; // Store the blob globally for submission
+
+    async function toggleRecording() {
+        const btn = document.getElementById('recordBtn');
+        const status = document.getElementById('recordingStatus');
+
+        if (!isRecording) {
+            try {
+                // Request microphone access
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    recordedAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    document.getElementById('recordingStatus').innerText = "Audio recorded successfully! Ready to submit.";
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                btn.innerHTML = `<i class="fa-solid fa-stop"></i> Stop Recording`;
+                btn.style.background = "#ef4444"; // Red color for recording state
+                status.innerText = "Recording in progress...";
+            } catch (err) {
+                alert("Microphone access denied or not supported.");
+                console.error(err);
+            }
+        } else {
+            mediaRecorder.stop();
+            isRecording = false;
+            btn.innerHTML = `<i class="fa-solid fa-microphone"></i> Start Recording Feedback`;
+            btn.style.background = ""; 
+        }
+    }
+
+    // Call this function when the user clicks your main "Submit Feedback" form button
+    async function submitFeedbackForm(event) {
+        if (event) event.preventDefault();
+
+        // Get your transcribed text from your input or speech-to-text element
+        // (Make sure to change '#transcript-input' to match your actual input element ID or class)
+        const transcriptElement = document.getElementById('transcript-input');
+        const transcript = transcriptElement ? transcriptElement.value : "";
+
+        const formData = new FormData();
+        formData.append('comment', transcript);
+
+        // Append the recorded audio file if available
+        if (recordedAudioBlob) {
+            formData.append('audio', recordedAudioBlob, 'voice_feedback.webm');
+        }
+
+        // Add any other form fields you might have (like rating or service type)
+        // formData.append('service', document.getElementById('service-select').value);
+
+        try {
+            const response = await fetch('/submit-feedback', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                alert('Feedback and audio submitted successfully!');
+                window.location.reload(); // Or redirect to thank you page
+            } else {
+                alert('Failed to submit feedback.');
+            }
+        } catch (err) {
+            console.error("Submission error:", err);
+            alert("Error submitting feedback.");
+        }
+    }
+</script>

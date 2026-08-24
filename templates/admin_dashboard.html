@@ -8,7 +8,16 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #05070b; color: #f3f4f6; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        body, html {
+            height: auto;
+            min-height: 100vh;
+            overflow-y: auto;
+            background: #05070b; 
+            color: #f3f4f6; 
+            display: flex; 
+            flex-direction: column; 
+        }
         
         header { background: rgba(11, 15, 25, 0.95); backdrop-filter: blur(12px); padding: 18px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); position: sticky; top: 0; z-index: 1000; }
         .logo-area { display: flex; align-items: center; gap: 15px; text-decoration: none; }
@@ -31,6 +40,7 @@
         .dropdown.active .dropdown-content { display: block; }
 
         .container { max-width: 1400px; margin: 35px auto; padding: 0 25px; width: 100%; flex: 1; }
+        .dashboard-container { min-height: 100vh; padding-bottom: 80px; }
         
         .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: linear-gradient(135deg, #111827, #1f2937); padding: 25px 35px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.06); flex-wrap: wrap; gap: 20px; }
         .dashboard-header h2 { font-size: 26px; color: #ffffff; font-weight: 700; }
@@ -78,7 +88,7 @@
         .apply-filter-btn { background: #f59e0b; color: #030712; font-weight: 800; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; height: max-content; align-self: flex-end; }
         .apply-filter-btn:hover { background: #fbbf24; }
 
-        .table-section { background: #111827; border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; padding: 25px; overflow-x: auto; }
+        .table-section { background: #111827; border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; padding: 25px; overflow-x: auto; margin-bottom: 25px; }
         .table-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
         .table-section h3 { font-size: 20px; color: #f9fafb; font-weight: 600; }
         
@@ -93,6 +103,9 @@
         .comment-text { color: #d1d5db; max-width: 400px; word-break: break-word; }
         .date-text { color: #9ca3af; font-size: 13px; }
         .no-data { text-align: center; padding: 50px; color: #9ca3af; }
+
+        .export-btn { background: #1a2234; border: 1px solid rgba(255,255,255,0.1); color: #f3f4f6; padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+        .export-btn:hover { background: #222d44; border-color: rgba(56,189,248,0.4); }
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 2000; justify-content: center; align-items: center; }
         .modal-overlay.active { display: flex; }
@@ -111,6 +124,7 @@
 </head>
 <body>
 
+    <!-- Header Component -->
     <header>
         <a href="{{ url_for('admin_dashboard') }}" class="logo-area">
             <img src="{{ url_for('static', filename='images/police_logo.png') }}" alt="Logo">
@@ -120,6 +134,9 @@
             </div>
         </a>
         <div class="header-right">
+            <a href="{{ url_for('admin_audit_logs') }}" class="action-btn">
+                📜 Audit Logs
+            </a>
             <a href="{{ url_for('admin_notifications') }}" class="action-btn">
                 🔔 Notifications <span style="background:#ef4444; color:white; padding:2px 6px; border-radius:10px; font-size:11px;">{{ unread_notifications_count | default(0) }}</span>
             </a>
@@ -130,178 +147,232 @@
         </div>
     </header>
 
+    <!-- Main Container -->
     <div class="container">
-        <div class="dashboard-header">
-            <div>
-                <h2>{{ admin_title }}</h2>
-                <p>{% if is_general %}Complete system overview with analytics and folder filters.{% else %}Viewing direct database records for your assigned department.{% endif %}</p>
-            </div>
-            <div class="header-controls">
-                <div class="total-badge">
-                    <span></span> Total Feedbacks: {{ total_feedbacks_count }}
-                </div>
-            </div>
-        </div>
-
-        <!-- Search Form Component -->
-        <form method="GET" action="{{ url_for('admin_dashboard') }}" class="search-form">
-            <input 
-                type="text" 
-                name="search" 
-                value="{{ search_query }}" 
-                placeholder="Search by ID, Service, Language, Rating, Comment, or Date..." 
-                class="search-input"
-            >
-            <button type="submit" class="search-btn">Search</button>
-        </form>
-
-        {% if is_general %}
-        <div class="dashboard-grid">
-            <div class="card">
-                <h3>📊 Service Distribution (%)</h3>
-                <div class="chart-container">
-                    <canvas id="feedbackChart"></canvas>
-                </div>
-            </div>
+        <div class="dashboard-container">
             
-            <div class="card" style="background: transparent; border: none; padding: 0; box-shadow: none;">
-                <div class="folder-grid">
-                    <a href="{{ url_for('admin_dashboard', service='all') }}" class="folder-card {% if current_filter == 'all' %}active{% endif %}">
-                        <div class="folder-top">
-                            <span class="folder-icon">📂</span>
-                            <span class="folder-count">{{ total_feedbacks_count }}</span>
-                        </div>
-                        <div>
-                            <h4>All Services Database</h4>
-                            <span>View complete system records</span>
-                        </div>
-                    </a>
-                    {% for key, name in service_map.items() %}
-                    <a href="{{ url_for('admin_dashboard', service=key) }}" class="folder-card {% if current_filter == key %}active{% endif %}">
-                        <div class="folder-top">
-                            <span class="folder-icon">📁</span>
-                            <span class="folder-count">{{ service_counts.get(key, 0) }}</span>
-                        </div>
-                        <div>
-                            <h4>{{ name }}</h4>
-                            <span>Open folder records</span>
-                        </div>
-                    </a>
-                    {% endfor %}
+            <!-- Dashboard Header Info -->
+            <div class="dashboard-header">
+                <div>
+                    <h2>{{ admin_title | default('Admin Dashboard') }}</h2>
+                    <p>{% if is_general %}Complete system overview with analytics and folder filters.{% else %}Viewing direct database records for your assigned department.{% endif %}</p>
                 </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Advanced Filters Panel -->
-        <form method="GET" action="{{ url_for('admin_dashboard') }}" class="filter-container">
-            <div class="filter-group">
-                <label for="service_filter">SERVICE</label>
-                <select name="service_filter" id="service_filter">
-                    <option value="all">All Services</option>
-                    {% for key, name in service_map.items() %}
-                        <option value="{{ key }}" {% if request.args.get('service_filter') == key %}selected{% endif %}>{{ name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="filter-group">
-                <label for="rating">RATING</label>
-                <select name="rating" id="rating">
-                    <option value="">All Ratings</option>
-                    <option value="😍" {% if request.args.get('rating') == '😍' %}selected{% endif %}>😍 Very Satisfied</option>
-                    <option value="😊" {% if request.args.get('rating') == '😊' %}selected{% endif %}>😊 Satisfied</option>
-                    <option value="😐" {% if request.args.get('rating') == '😐' %}selected{% endif %}>😐 Neutral</option>
-                    <option value="🙁" {% if request.args.get('rating') == '🙁' %}selected{% endif %}>🙁 Not Satisfied</option>
-                    <option value="😠" {% if request.args.get('rating') == '😠' %}selected{% endif %}>😠 Very Dissatisfied</option>
-                </select>
-            </div>
-
-            <div class="filter-group">
-                <label for="date_from">DATE FROM</label>
-                <input type="date" name="date_from" id="date_from" value="{{ request.args.get('date_from', '') }}">
-            </div>
-
-            <div class="filter-group">
-                <label for="date_to">DATE TO</label>
-                <input type="date" name="date_to" id="date_to" value="{{ request.args.get('date_to', '') }}">
-            </div>
-
-            <button type="submit" class="apply-filter-btn">
-                <i class="fas fa-filter"></i> Apply Filter
-            </button>
-        </form>
-
-        <div class="table-section">
-            <div class="table-section-header">
-                <h3>📋 Database Records {% if current_filter != 'all' %}(Folder: {{ service_map.get(current_filter, current_filter) }}){% endif %}</h3>
-                
-                <div class="dropdown" id="exportDropdownContainer">
-                    <button class="action-btn" type="button" onclick="toggleDropdown(event)">
-                        📥 Export Report ▾
-                    </button>
-                    <div class="dropdown-content">
-                        <a href="{{ url_for('export_excel', service=request.args.get('service', current_filter), service_filter=request.args.get('service_filter', ''), rating=request.args.get('rating', ''), date_from=request.args.get('date_from', ''), date_to=request.args.get('date_to', ''), search=request.args.get('search', '')) }}" onclick="handleExportClick('excel')">📊 Export to Excel (.xlsx)</a>
-                        <a href="{{ url_for('export_word', service=request.args.get('service', current_filter), service_filter=request.args.get('service_filter', ''), rating=request.args.get('rating', ''), date_from=request.args.get('date_from', ''), date_to=request.args.get('date_to', ''), search=request.args.get('search', '')) }}" onclick="handleExportClick('word')">📝 Export to Word (.docx)</a>
-                        <a href="{{ url_for('export_pdf', service=request.args.get('service', current_filter), service_filter=request.args.get('service_filter', ''), rating=request.args.get('rating', ''), date_from=request.args.get('date_from', ''), date_to=request.args.get('date_to', ''), search=request.args.get('search', '')) }}" onclick="handleExportClick('pdf')">📄 Export to PDF (.pdf)</a>
+                <div class="header-controls">
+                    <div class="total-badge">
+                        <span></span> Total Feedbacks: {{ total_feedbacks_count | default(0) }}
                     </div>
                 </div>
             </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Service & Sub-Service</th>
-                        <th>Rating (Emoji & Value)</th>
-                        <th>Comment</th>
-                        <th>Submission Date & Time</th>
-                    </tr>
-                </thead>
-                <tbody id="report-table-body">
-                    {% if feedbacks %}
-                        {% for fb in feedbacks %}
+            <!-- Search Form Component -->
+            <form method="GET" action="{{ url_for('admin_dashboard') }}" class="search-form">
+                <input 
+                    type="text" 
+                    name="search" 
+                    value="{{ search_query | default('') }}" 
+                    placeholder="Search by ID, Service, Language, Rating, Comment, or Date..." 
+                    class="search-input"
+                >
+                <button type="submit" class="search-btn">Search</button>
+            </form>
+
+            <!-- General Overview Section (Charts & Folders) -->
+            {% if is_general %}
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h3>📊 Service Distribution (%)</h3>
+                    <div class="chart-container">
+                        <canvas id="feedbackChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="card" style="background: transparent; border: none; padding: 0; box-shadow: none;">
+                    <div class="folder-grid">
+                        <a href="{{ url_for('admin_dashboard', service='all') }}" class="folder-card {% if current_filter == 'all' %}active{% endif %}">
+                            <div class="folder-top">
+                                <span class="folder-icon">📂</span>
+                                <span class="folder-count">{{ total_feedbacks_count | default(0) }}</span>
+                            </div>
+                            <div>
+                                <h4>All Services Database</h4>
+                                <span>View complete system records</span>
+                            </div>
+                        </a>
+                        {% if service_map is defined %}
+                            {% for key, name in service_map.items() %}
+                            <a href="{{ url_for('admin_dashboard', service=key) }}" class="folder-card {% if current_filter == key %}active{% endif %}">
+                                <div class="folder-top">
+                                    <span class="folder-icon">📁</span>
+                                    <span class="folder-count">{{ service_counts.get(key, 0) if service_counts is defined else 0 }}</span>
+                                </div>
+                                <div>
+                                    <h4>{{ name }}</h4>
+                                    <span>Open folder records</span>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- AI Insights Summary Card -->
+            <div class="ai-insights-container" style="background: #111827; border: 1px solid #374151; border-radius: 12px; padding: 20px; color: #ffffff; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+                <div style="display: flex; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #374151; padding-bottom: 10px;">
+                    <span style="font-size: 20px; margin-right: 8px;">✨</span>
+                    <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #f3f4f6;">AI Summary & Insights</h3>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div style="background: #1f2937; padding: 12px; border-radius: 8px;">
+                        <span style="display: block; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Overall Satisfaction</span>
+                        <span style="font-size: 20px; font-weight: bold; color: #10b981;">{{ ai_insights.satisfaction if ai_insights is defined and ai_insights.satisfaction is defined else 'N/A' }}</span>
+                    </div>
+                    
+                    <div style="background: #1f2937; padding: 12px; border-radius: 8px;">
+                        <span style="display: block; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Most Used Service</span>
+                        <span style="font-size: 16px; font-weight: 600; color: #60a5fa;">{{ ai_insights.top_service if ai_insights is defined and ai_insights.top_service is defined else 'N/A' }}</span>
+                    </div>
+                    
+                    <div style="background: #1f2937; padding: 12px; border-radius: 8px;">
+                        <span style="display: block; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Main Complaint</span>
+                        <span style="font-size: 16px; font-weight: 600; color: #f87171;">{{ ai_insights.main_complaint if ai_insights is defined and ai_insights.main_complaint is defined else 'None' }}</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 15px; background: #1f2937; padding: 12px; border-radius: 8px; border-left: 4px solid #6366f1;">
+                    <span style="display: block; font-size: 12px; color: #9ca3af; text-transform: uppercase; margin-bottom: 4px;">AI Recommendation</span>
+                    <p style="margin: 0; font-size: 14px; color: #e5e7eb;">{{ ai_insights.recommendation if ai_insights is defined and ai_insights.recommendation is defined else 'No specific recommendation available.' }}</p>
+                </div>
+            </div>
+
+            <!-- Advanced Filters Panel -->
+            <form method="GET" action="{{ url_for('admin_dashboard') }}" class="filter-container">
+                <div class="filter-group">
+                    <label for="service_filter">SERVICE</label>
+                    <select name="service_filter" id="service_filter">
+                        <option value="all">All Services</option>
+                        {% if service_map is defined %}
+                            {% for key, name in service_map.items() %}
+                                <option value="{{ key }}" {% if request.args.get('service_filter') == key %}selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="rating">RATING</label>
+                    <select name="rating" id="rating">
+                        <option value="">All Ratings</option>
+                        <option value="😍" {% if request.args.get('rating') == '😍' %}selected{% endif %}>😍 Very Satisfied</option>
+                        <option value="😊" {% if request.args.get('rating') == '😊' %}selected{% endif %}>😊 Satisfied</option>
+                        <option value="😐" {% if request.args.get('rating') == '😐' %}selected{% endif %}>😐 Neutral</option>
+                        <option value="🙁" {% if request.args.get('rating') == '🙁' %}selected{% endif %}>🙁 Not Satisfied</option>
+                        <option value="😠" {% if request.args.get('rating') == '😠' %}selected{% endif %}>😠 Very Dissatisfied</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="date_from">DATE FROM</label>
+                    <input type="date" name="date_from" id="date_from" value="{{ request.args.get('date_from', '') }}">
+                </div>
+
+                <div class="filter-group">
+                    <label for="date_to">DATE TO</label>
+                    <input type="date" name="date_to" id="date_to" value="{{ request.args.get('date_to', '') }}">
+                </div>
+
+                <button type="submit" class="apply-filter-btn">
+                    <i class="fas fa-filter"></i> Apply Filter
+                </button>
+            </form>
+
+            <!-- Database Records Table Section -->
+            <div class="table-section">
+                <div class="table-section-header">
+                    <h3>📋 Database Records {% if current_filter is defined and current_filter != 'all' %}(Folder: {{ service_map.get(current_filter, current_filter) if service_map is defined else current_filter }}){% endif %}</h3>
+                    
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <a href="/admin/export/word{{ request.full_path | replace('/admin/dashboard', '') }}" class="export-btn" onclick="handleExportClick('word')">
+                            📝 Export Word
+                        </a>
+                        <a href="/admin/export/excel{{ request.full_path | replace('/admin/dashboard', '') }}" class="export-btn" onclick="handleExportClick('excel')">
+                            📊 Export Excel
+                        </a>
+                        <a href="/admin/export/pdf{{ request.full_path | replace('/admin/dashboard', '') }}" class="export-btn" onclick="handleExportClick('pdf')">
+                            📄 Export PDF
+                        </a>
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
                         <tr>
-                            <td>#{{ fb.id }}</td>
-                            <td>
-                                <div>
-                                    {% set raw_service = fb.service_name | string | trim %}
-                                    {% set s_key = raw_service | lower %}
-                                    <span class="badge-service">{{ service_map.get(s_key, raw_service) if service_map is defined and s_key in service_map else raw_service }}</span>
-                                </div>
-                                <div>
-                                    {% set raw_sub = fb.sub_service or 'General Sub-Service' %}
-                                    {% set sub_key = raw_sub | string | lower | trim %}
-                                    <span class="badge-subservice">↳ {{ sub_service_map.get(s_key, {}).get(sub_key, raw_sub) if sub_service_map is defined else raw_sub }}</span>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge-rating">
-                                    {% set r = fb.rating | string %}
-                                    {% if r == '1' or r == '😡' %} 😡 (1)
-                                    {% elif r == '2' or r == '🙁' %} 🙁 (2)
-                                    {% elif r == '3' or r == '😐' %} 😐 (3)
-                                    {% elif r == '4' or r == '😊' %} 😊 (4)
-                                    {% elif r == '5' or r == '😍' %} 😍 (5)
-                                    {% else %} {{ fb.rating }}
+                            <th>ID</th>
+                            <th>Service & Sub-Service</th>
+                            <th>Rating (Emoji & Value)</th>
+                            <th>Comment</th>
+                            <th>Audio Feedback</th>
+                            <th>Submission Date & Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-table-body">
+                        {% if feedbacks %}
+                            {% for fb in feedbacks %}
+                            <tr>
+                                <td>#{{ fb.id }}</td>
+                                <td>
+                                    <div>
+                                        {% set raw_service = fb.service_name | string | trim %}
+                                        {% set s_key = raw_service | lower %}
+                                        <span class="badge-service">{{ service_map.get(s_key, raw_service) if service_map is defined and s_key in service_map else raw_service }}</span>
+                                    </div>
+                                    <div>
+                                        {% set raw_sub = fb.sub_service or 'General Sub-Service' %}
+                                        {% set sub_key = raw_sub | string | lower | trim %}
+                                        <span class="badge-subservice">↳ {{ sub_service_map.get(s_key, {}).get(sub_key, raw_sub) if sub_service_map is defined else raw_sub }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge-rating">
+                                        {% set r = fb.rating | string %}
+                                        {% if r == '1' or r == '😡' %} 😡 (1)
+                                        {% elif r == '2' or r == '🙁' %} 🙁 (2)
+                                        {% elif r == '3' or r == '😐' %} 😐 (3)
+                                        {% elif r == '4' or r == '😊' %} 😊 (4)
+                                        {% elif r == '5' or r == '😍' %} 😍 (5)
+                                        {% else %} {{ fb.rating }}
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="comment-text">{{ fb.comment if fb.comment else 'No comment provided.' }}</div>
+                                </td>
+                                <td>
+                                    {% if fb.audio_path %}
+                                        <audio controls style="height: 35px; width: 200px;">
+                                            <source src="{{ url_for('static', filename=fb.audio_path) }}" type="audio/webm">
+                                            Your browser does not support the audio element.
+                                        </audio>
+                                    {% else %}
+                                        <span class="text-muted" style="color: #6b7280; font-size: 12px;">No audio recorded</span>
                                     {% endif %}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="comment-text">{{ fb.comment if fb.comment else 'No comment provided.' }}</div>
-                            </td>
-                            <td>
-                                <div class="date-text">{{ fb.timestamp }}</div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr>
-                            <td colspan="5" class="no-data">No feedback records found matching your query or folder criteria.</td>
-                        </tr>
-                    {% endif %}
-                </tbody>
-            </table>
+                                </td>
+                                <td>
+                                    <div class="date-text">{{ fb.timestamp }}</div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="no-data">No feedback records found matching your query or folder criteria.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
         </div>
     </div>
 
@@ -327,7 +398,8 @@
         </div>
     </div>
 
-    {% if is_general %}
+    <!-- Chart Script -->
+    {% if is_general and chart_data is defined %}
     <script>
         const ctx = document.getElementById('feedbackChart').getContext('2d');
         const chartDataKeys = JSON.parse('{{ chart_data.keys() | list | tojson | safe }}');
@@ -361,43 +433,43 @@
     {% endif %}
 
     <script>
-        function toggleDropdown(event) {
-            event.stopPropagation();
-            document.getElementById("exportDropdownContainer").classList.toggle("active");
-        }
-
-        function handleExportClick(format) {
-            document.getElementById("exportDropdownContainer").classList.remove("active");
-            
-            const serviceVal = "{{ current_filter }}";
-            const reportName = `Ethiopian Federal Police Feedback Report (${serviceVal.toUpperCase()})`;
-            const shareText = encodeURIComponent(`Check out the latest feedback report: ${reportName}`);
-            
-            document.getElementById('whatsappShare').href = `https://api.whatsapp.com/send?text=${shareText}`;
-            document.getElementById('telegramShare').href = `https://t.me/share/url?url=&text=${shareText}`;
-            document.getElementById('emailShare').href = `mailto:?subject=${encodeURIComponent(reportName)}&body=${shareText}`;
-            
-            setTimeout(() => {
-                document.getElementById('shareModal').classList.add('active');
-            }, 800);
+        function handleExportClick(fileType) {
+            const modal = document.getElementById('shareModal');
+            if (modal) {
+                modal.classList.add('active');
+            }
         }
 
         function closeShareModal() {
-            document.getElementById('shareModal').classList.remove('active');
-        }
-
-        window.onclick = function(event) {
-            if (!event.target.closest('.dropdown')) {
-                var dropdowns = document.getElementsByClassName("dropdown");
-                for (var i = 0; i < dropdowns.length; i++) {
-                    var openDropdown = dropdowns[i];
-                    if (openDropdown.classList.contains('active')) {
-                        openDropdown.classList.remove('active');
-                    }
-                }
+            const modal = document.getElementById('shareModal');
+            if (modal) {
+                modal.classList.remove('active');
             }
         }
-    </script>
 
+        // WhatsApp Share Handler
+        document.getElementById('whatsappShare').addEventListener('click', function() {
+            const text = encodeURIComponent("Hello, here is the Ethiopian Federal Police Feedback Report summary.");
+            window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+        });
+
+        // Telegram Share Handler
+        document.getElementById('telegramShare').addEventListener('click', function() {
+            const text = encodeURIComponent("Ethiopian Federal Police - Feedback Report summary.");
+            window.open(`https://t.me/share/url?url=&text=${text}`, '_blank');
+        });
+
+        // Email Share Handler
+        document.getElementById('emailShare').addEventListener('click', function() {
+            const subject = encodeURIComponent("Ethiopian Federal Police Feedback Report");
+            const body = encodeURIComponent("Please find attached/reviewed the latest feedback report from the dashboard.");
+            window.location.href = `mailto:?subject=${subject}&body=${body}`;
+        });
+    </script>
 </body>
 </html>
+<select name="service_filter" class="form-control">
+    <option value="all" {% if selected_service == 'all' %}selected{% endif %}>All Services</option>
+    <option value="logistics" {% if selected_service == 'logistics' %}selected{% endif %}>Logistics</option>
+    <!-- Add your other services here -->
+</select>

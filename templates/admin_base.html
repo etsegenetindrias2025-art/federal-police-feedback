@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Ethiopian Federal Police</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-black text-white">
+
+    <!-- Top Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom border-secondary px-4">
+        <a class="navbar-brand d-flex align-items-center" href="/admin/dashboard">
+            <span class="ms-2 fw-bold">Ethiopian Federal Police <small class="text-muted fs-6">| Feedback Management System</small></span>
+        </a>
+        <div class="ms-auto">
+            <a href="/admin/dashboard" class="btn btn-sm btn-outline-light me-2"><i class="fas fa-home me-1"></i> Dashboard</a>
+            <a href="/admin/settings" class="btn btn-sm btn-outline-light me-2"><i class="fas fa-cog me-1"></i> Settings</a>
+            <a href="/admin/logout" class="btn btn-sm btn-danger"><i class="fas fa-sign-out-alt me-1"></i> Logout</a>
+        </div>
+    </nav>
+
+    <!-- Main Content Injection Area -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ethiopian Federal Police - Citizen Feedback System</title>
+    <!-- Correct Flask static file referencing -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Your content here -->
+</body>
+</html>

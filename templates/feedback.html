@@ -8,9 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Noto+Sans+Ethiopic:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* ---------------------------------------------------------------
-            Base layout
-        ----------------------------------------------------------------*/
         body {
             font-family: 'Montserrat', 'Noto Sans Ethiopic', sans-serif;
             background: radial-gradient(circle at center, #172554, #0f172a, #020617);
@@ -23,6 +20,21 @@
             color: white;
             padding: 20px;
             overflow-x: hidden;
+            transition: background 0.5s ease, color 0.5s ease;
+        }
+
+        body.light-mode {
+            background: radial-gradient(circle at center, #eff6ff, #dbeafe, #bfdbfe);
+            color: #0f172a;
+        }
+
+        @keyframes professionalFadeIn {
+            0% { opacity: 0; transform: translateY(40px) scale(0.96); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .page-enter {
+            animation: professionalFadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         .glass-panel {
@@ -30,17 +42,14 @@
             backdrop-filter: blur(40px);
             border: 1px solid rgba(251, 191, 36, 0.35);
             box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.95);
+            position: relative;
+            transition: background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
         }
 
-        /* ---------------------------------------------------------------
-            Page / card entrance animations
-        ----------------------------------------------------------------*/
-        @keyframes professionalFadeIn {
-            0% { opacity: 0; transform: translateY(40px) scale(0.96); }
-            100% { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        .page-enter {
-            animation: professionalFadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        body.light-mode .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(30, 58, 138, 0.3);
+            box-shadow: 0 20px 50px -10px rgba(30, 58, 138, 0.15);
         }
 
         @keyframes ultraSmoothDrop {
@@ -49,21 +58,28 @@
             85% { opacity: 1; transform: translateY(-6px) scale(0.98); }
             100% { opacity: 1; transform: translateY(0) scale(1); }
         }
+
         .drop-anim-1 { animation: ultraSmoothDrop 1.6s cubic-bezier(0.2, 0.9, 0.3, 1) 0.25s both; }
         .drop-anim-2 { animation: ultraSmoothDrop 1.6s cubic-bezier(0.2, 0.9, 0.3, 1) 0.40s both; }
         .drop-anim-3 { animation: ultraSmoothDrop 1.6s cubic-bezier(0.2, 0.9, 0.3, 1) 0.55s both; }
         .drop-anim-4 { animation: ultraSmoothDrop 1.6s cubic-bezier(0.2, 0.9, 0.3, 1) 0.70s both; }
         .drop-anim-5 { animation: ultraSmoothDrop 1.6s cubic-bezier(0.2, 0.9, 0.3, 1) 0.85s both; }
 
-        /* ---------------------------------------------------------------
-            Rating cards
-        ----------------------------------------------------------------*/
         .rating-card {
             background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.98));
             border: 1px solid rgba(251, 191, 36, 0.2);
             transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
             cursor: pointer;
             position: relative;
+        }
+
+        body.light-mode .rating-card {
+            background: linear-gradient(145deg, #ffffff, #f1f5f9);
+            border: 1px solid rgba(30, 58, 138, 0.2);
+        }
+
+        body.light-mode .rating-card span[class*="lbl-"] {
+            color: #1e293b !important;
         }
 
         .rating-card.selected {
@@ -73,11 +89,29 @@
             transform: translateY(-15px) scale(1.08);
         }
 
+        body.light-mode .rating-card.selected {
+            background: linear-gradient(145deg, #3b82f6, #1d4ed8);
+            border-color: #1e40af;
+        }
+
+        body.light-mode .rating-card.selected span[class*="lbl-"] {
+            color: #ffffff !important;
+        }
+
         .rating-card:hover {
             transform: translateY(-15px) scale(1.08);
             border-color: #fbbf24;
             background: linear-gradient(145deg, rgba(37, 99, 235, 0.55), rgba(15, 23, 42, 0.99));
             box-shadow: 0 30px 60px -15px rgba(251, 191, 36, 0.5), 0 0 30px rgba(37, 99, 235, 0.8);
+        }
+
+        body.light-mode .rating-card:hover {
+            background: linear-gradient(145deg, #60a5fa, #2563eb);
+            border-color: #1d4ed8;
+        }
+
+        body.light-mode .rating-card:hover span[class*="lbl-"] {
+            color: #ffffff !important;
         }
 
         .rating-card:hover span.emoji, .rating-card.selected span.emoji {
@@ -90,18 +124,26 @@
             transition: transform 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.7s ease;
         }
 
-        /* ---------------------------------------------------------------
-            Voice recorder / voice guide
-        ----------------------------------------------------------------*/
         @keyframes pulseGlow {
-            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+            0% { box-shadow: 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
         }
+
         .recording-active {
             animation: pulseGlow 1.5s infinite;
             background-color: #dc2626 !important;
             border-color: #f87171 !important;
+        }
+
+        @keyframes smoothBounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-6px) scale(1.15); }
+        }
+
+        .success-motion-icon {
+            display: inline-block;
+            animation: smoothBounce 2s infinite ease-in-out;
         }
 
         .voice-guide-container {
@@ -128,6 +170,12 @@
             gap: 6px;
         }
 
+        body.light-mode .voice-btn {
+            background: #ffffff;
+            border: 1px solid rgba(30, 58, 138, 0.3);
+            color: #1e293b;
+        }
+
         .voice-btn:hover {
             background: rgba(37, 99, 235, 0.4);
             border-color: #fbbf24;
@@ -136,35 +184,87 @@
             box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
         }
 
-        /* ---------------------------------------------------------------
-            Success modal
-        ----------------------------------------------------------------*/
-        @keyframes smoothBounce {
-            0%, 100% { transform: translateY(0) scale(1); }
-            50% { transform: translateY(-6px) scale(1.15); }
+        body.light-mode .voice-btn:hover {
+            background: #2563eb;
+            color: #ffffff;
         }
-        .success-motion-icon {
-            display: inline-block;
-            animation: smoothBounce 2s ease-in-out infinite;
+
+        body.light-mode #hdr-title { color: #1e3a8a; }
+        body.light-mode #hdr-sub { color: #475569; }
+        body.light-mode #main-heading { color: #1e3a8a; }
+        body.light-mode #main-desc { color: #475569; }
+        body.light-mode #lbl-comment { color: #334155; }
+        body.light-mode #user-comment {
+            background-color: #ffffff;
+            color: #0f172a;
+            border-color: #cbd5e1;
+        }
+        body.light-mode #record-btn {
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+            color: #334155;
+        }
+        body.light-mode #record-status { color: #334155; }
+        body.light-mode .mic-container-bg {
+            background-color: #f8fafc;
+            border-color: #e2e8f0;
+        }
+        body.light-mode #btn-back {
+            background-color: #e2e8f0;
+            color: #1e293b;
+            border-color: #cbd5e1;
+        }
+
+        #theme-toggle {
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+        }
+
+        body.light-mode #theme-toggle {
+            background: #ffffff;
+            border-color: rgba(30, 58, 138, 0.4);
+            color: #1e3a8a;
         }
     </style>
 </head>
+
 <body class="page-enter" id="body-content">
 
     <!-- Federal Police Logo -->
     <div class="flex justify-center mb-3">
         <div class="w-16 h-16 rounded-full bg-slate-900 border-2 border-amber-400/60 flex items-center justify-center shadow-lg shadow-amber-500/10 p-1.5">
-            <img src="{{ url_for('static', filename='images/police_logo.png') }}" alt="Federal Police Logo" class="w-full h-full object-contain" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/2/2b/Emblem_of_Ethiop3.png'">
+            <img
+                src="{{ url_for('static', filename='images/police_logo.png') }}"
+                alt="Federal Police Logo"
+                class="w-full h-full object-contain"
+                onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/2/2b/Emblem_of_Ethiop3.png'"
+            >
         </div>
     </div>
 
     <div class="text-center mb-5">
-        <h1 id="hdr-title" class="text-xl md:text-2xl font-extrabold text-amber-400 mb-1 tracking-wider">የኢትዮጵያ ፌዴራል ፖሊስ</h1>
-        <p id="hdr-sub" class="text-xs text-gray-300 font-medium tracking-wide">Ethiopian Federal Police Service Feedback System</p>
+        <h1 id="hdr-title" class="text-xl md:text-2xl font-extrabold text-amber-400 mb-1 tracking-wider">
+            የኢትዮጵያ ፌዴራል ፖሊስ
+        </h1>
+        <p id="hdr-sub" class="text-xs text-gray-300 font-medium tracking-wide">
+            Ethiopian Federal Police Service Feedback System
+        </p>
     </div>
 
     <div class="glass-panel p-6 md:p-10 rounded-3xl w-full max-w-4xl text-center">
-        <!-- Heading Section -->
+
+        <!-- Dark / Light Mode Toggle -->
+        <button
+            id="theme-toggle"
+            type="button"
+            onclick="toggleTheme()"
+            class="absolute top-4 right-4 text-amber-400 font-semibold px-3 py-1.5 rounded-xl transition-all duration-300 flex items-center space-x-2 shadow-md hover:scale-105 z-10 text-xs"
+        >
+            <i id="theme-icon" class="fa-solid fa-moon text-sm"></i>
+            <span id="theme-text">Dark Mode</span>
+        </button>
+
+        <!-- Heading -->
         <div id="welcome-section" class="mb-6">
             <h2 id="main-heading" class="text-lg md:text-xl font-extrabold mb-2 text-amber-300 tracking-wide">
                 በተሰጠዎት አገልግሎት ምን ያህል ረክተዋል?
@@ -180,142 +280,205 @@
                 <span class="emoji text-4xl md:text-5xl">😡</span>
                 <span class="lbl-1 font-bold text-xs text-white tracking-wide">በጣም አላረኩም</span>
             </div>
+
             <div onclick="selectRating('2')" id="rate-2" class="rating-card drop-anim-2 p-5 rounded-2xl flex flex-col items-center justify-center space-y-2">
                 <span class="emoji text-4xl md:text-5xl">🙁</span>
                 <span class="lbl-2 font-bold text-xs text-white tracking-wide">አላረኩም</span>
             </div>
+
             <div onclick="selectRating('3')" id="rate-3" class="rating-card drop-anim-3 p-5 rounded-2xl flex flex-col items-center justify-center space-y-2">
                 <span class="emoji text-4xl md:text-5xl">😐</span>
                 <span class="lbl-3 font-bold text-xs text-white tracking-wide">መካከለኛ</span>
             </div>
+
             <div onclick="selectRating('4')" id="rate-4" class="rating-card drop-anim-4 p-5 rounded-2xl flex flex-col items-center justify-center space-y-2">
                 <span class="emoji text-4xl md:text-5xl">😊</span>
                 <span class="lbl-4 font-bold text-xs text-white tracking-wide">ረክቻለሁ</span>
             </div>
+
             <div onclick="selectRating('5')" id="rate-5" class="rating-card drop-anim-5 p-5 rounded-2xl flex flex-col items-center justify-center space-y-2">
                 <span class="emoji text-4xl md:text-5xl">😍</span>
                 <span class="lbl-5 font-bold text-xs text-white tracking-wide">በጣም ረክቻለሁ</span>
             </div>
         </div>
 
-        <!-- Comment & Voice Speech-to-Text Recorder -->
+        <!-- Comment & Voice Recorder -->
         <div class="mb-6 text-left space-y-3">
             <div>
-                <label id="lbl-comment" class="block text-xs font-semibold text-gray-300 mb-1">አስተያየትዎን በጽሁፍ ይጻፉ (አማራጭ):</label>
-                <textarea id="user-comment" rows="2" placeholder="ስለተሰጠው አገልግሎትዎ ሃሳብ ወይም አስተያየት ይጻፉ..." class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-400 transition-all"></textarea>
+                <label id="lbl-comment" class="block text-xs font-semibold text-gray-300 mb-1">
+                    አስተያየትዎን በጽሁፍ ይጻፉ (አማራጭ):
+                </label>
+
+                <textarea
+                    id="user-comment"
+                    rows="2"
+                    placeholder="ስለተሰጠው አገልግሎትዎ ሃሳብ ወይም አስተያየት ይጻፉ..."
+                    class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-400 transition-all"
+                ></textarea>
             </div>
 
-            <div class="flex items-center justify-between bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+            <div class="mic-container-bg flex items-center justify-between bg-slate-900/60 p-3 rounded-xl border border-slate-800">
                 <div class="flex items-center space-x-3">
-                    <button type="button" id="record-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl flex items-center space-x-2 border border-slate-600 transition-all text-xs">
+                    <button
+                        type="button"
+                        id="record-btn"
+                        class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl flex items-center space-x-2 border border-slate-600 transition-all text-xs"
+                    >
                         <i id="mic-icon" class="fa-solid fa-microphone text-amber-400 text-sm"></i>
-                        <span id="record-status" class="font-semibold text-gray-300">ድምጽ ለመቅረጽ ማይኩን ይጫኑ</span>
+                        <span id="record-status" class="font-semibold text-gray-300">
+                            ድምጽ ለመቅረጽ ማይኩን ይጫኑ
+                        </span>
                     </button>
                 </div>
             </div>
         </div>
 
+        <!-- Alert -->
         <div id="alert-box" class="hidden mb-4 p-3.5 bg-red-950/85 border border-red-500 text-red-200 text-xs rounded-xl flex items-center space-x-3 text-left shadow-lg">
             <i class="fa-solid fa-triangle-exclamation text-amber-400 text-lg shrink-0"></i>
             <span id="alert-text" class="font-medium leading-relaxed"></span>
         </div>
 
+        <!-- Navigation / Submit -->
         <div class="flex items-center justify-between mb-6">
-            <button onclick="goBack()" class="bg-slate-800/90 hover:bg-slate-700 text-gray-300 font-semibold px-4 py-2 rounded-xl border border-slate-600 transition-all duration-500 flex items-center space-x-2 text-xs hover:scale-105">
+            <button
+                onclick="goBack()"
+                id="btn-back-container"
+                type="button"
+                class="bg-slate-800/90 hover:bg-slate-700 text-gray-300 font-semibold px-4 py-2 rounded-xl border border-slate-600 transition-all duration-500 flex items-center space-x-2 text-xs hover:scale-105"
+            >
                 <i class="fa-solid fa-arrow-left"></i>
                 <span id="btn-back">ወደ አገልግሎቶች ተመለስ</span>
             </button>
-            <button onclick="validateAndSubmit()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-6 py-2 rounded-xl text-xs transition-all shadow-lg flex items-center space-x-2 hover:scale-105">
-                <span id="btn-submit">አስገባና ጨርስ</span>
-                <i class="fa-solid fa-arrow-right"></i>
+
+            <button
+                onclick="validateAndSubmit()"
+                type="button"
+                class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl border border-amber-300/50 transition-all duration-300 flex items-center space-x-2 text-xs shadow-lg shadow-amber-500/20 hover:scale-105"
+            >
+                <span id="btn-submit">መዝግብ & ጨርስ</span>
+                <i class="fa-solid fa-paper-plane"></i>
             </button>
         </div>
 
-        <!-- Voice Guide Section using backend gTTS route -->
+        <!-- Voice Guides -->
         <div class="voice-guide-container">
-            <button onclick="playGttsGuide('Please select your satisfaction rating, and write your comments below.', 'en')" class="voice-btn">
-                🔊 Instructions (English)
+            <button
+                type="button"
+                onclick="playGttsGuide('እባክዎ የተሰማዎትን የእርካታ ደረጃ ይምረጡና አስተያየትዎን ያስቀምጡ።', 'am')"
+                class="voice-btn"
+            >
+                <i class="fa-solid fa-volume-high text-amber-400"></i>
+                Amharic Voice Guide
             </button>
-            <button onclick="playGttsGuide('እባክዎ የእርካታ ደረጃ ይምረጡ፣ እና አስተያየትዎን ከታች ይጻፉ።', 'am')" class="voice-btn">
-                🔊 Instructions (Amharic)
+
+            <button
+                type="button"
+                onclick="playGttsGuide('Maaloo sadarkaa quufaa keessan filadhaa, yaada keessanis gadiitti barreessaa.', 'om')"
+                class="voice-btn"
+            >
+                <i class="fa-solid fa-volume-high text-amber-400"></i>
+                Afaan Oromoo Voice Guide
             </button>
-            <button onclick="playGttsGuide('Maaloo sadarkaa quufaa keessan filadhaa, yaada keessanis gadiitti barreessaa.', 'om')" class="voice-btn">
-                🔊 Instructions (Afaan Oromoo)
+
+            <button
+                type="button"
+                onclick="playGttsGuide('ብዝተወሃበካ ኣገልግሎት ዘለካ ዕግበት ብምርጫ ግለጽ።', 'ti')"
+                class="voice-btn"
+            >
+                <i class="fa-solid fa-volume-high text-amber-400"></i>
+                Tigrinya Voice Guide
             </button>
-            <button onclick="playGttsGuide('ሕርያ ደረጃ ዕግበትኩም ምረጹ፣ ርእይቶኹም ድማ ኣብ ትሕቲ እቲ ጽሓፉ።', 'ti')" class="voice-btn">
-                🔊 Instructions (Tigrinya)
+
+            <button
+                type="button"
+                onclick="readFullUIEnglish()"
+                class="voice-btn"
+            >
+                <i class="fa-solid fa-volume-high text-amber-400"></i>
+                English Voice Guide
             </button>
         </div>
     </div>
 
     <!-- Success Modal -->
-    <div id="success-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 hidden opacity-0 transition-opacity duration-500">
-        <div class="glass-panel p-8 rounded-3xl text-center max-w-md mx-4 transform scale-90 transition-transform duration-500" id="success-card">
-            <div class="text-3xl md:text-4xl font-extrabold text-emerald-400 mb-3 flex items-center justify-center space-x-3">
-                <span id="success-title-text">thank you! 😊</span>
-                <span class="success-motion-icon">✅</span>
-            </div>
-            <p id="success-msg-text" class="text-xs text-gray-200 font-medium leading-relaxed">
-                your feedback has been submitted successfully
+    <div id="success-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-500">
+        <div id="success-card" class="bg-slate-900 border-2 border-amber-400/80 rounded-3xl p-8 max-w-sm w-full text-center transform scale-90 transition-transform duration-500 shadow-2xl">
+            <div class="text-6xl mb-4 success-motion-icon">✨</div>
+            <h3 id="success-title-text" class="text-xl font-bold text-amber-400 mb-2">እናመሰግናለን! 😊</h3>
+            <p id="success-msg-text" class="text-xs text-gray-300 mb-6 leading-relaxed">
+                አስተያየትዎ በጥሩ ሁኔታ ተመዝግቧል።
             </p>
         </div>
     </div>
 
     <script>
-        /* =================================================================
-           1. Page state & URL params
-        ==================================================================*/
+        /* -------------------------------------------------------
+           URL PARAMETERS
+        ------------------------------------------------------- */
         const urlParams = new URLSearchParams(window.location.search);
         const lang = urlParams.get('lang') || 'am';
-        const service = urlParams.get('service') || 'police_clearance';
-        const subServiceParam = urlParams.get('sub_service') || urlParams.get('sub') || '';
+        const service = urlParams.get('service') || 'General';
+        const subServiceParam = urlParams.get('sub_service') || '';
 
-        let selectedScore = '';
-
-        /* =================================================================
-           2. Translations
-        ==================================================================*/
+        /* -------------------------------------------------------
+           TRANSLATIONS
+        ------------------------------------------------------- */
         const translations = {
+            en: {
+                hdrTitle: "ETHIOPIAN FEDERAL POLICE",
+                hdrSub: "Citizen Feedback Portal",
+                mainHeading: "How satisfied are you with our service?",
+                mainDesc: "Please take a moment to select your rating emoji below and share your thoughts.",
+                l1: "Very Dissatisfied",
+                l2: "Dissatisfied",
+                l3: "Neutral",
+                l4: "Satisfied",
+                l5: "Very Satisfied",
+                lblComment: "Write your feedback (Optional):",
+                commentPlaceholder: "Type your comment or thoughts about the service here...",
+                recStatus: "Click mic to record voice",
+                recActive: "Listening...",
+                btnBack: "Back to Services",
+                btnSubmit: "Submit & Complete",
+                errRating: "Please select a rating option before proceeding!",
+                alertMismatch: "Your written comment contradicts the rating selected! ‼️",
+                successTitle: "Thank You! 😊",
+                successDesc: "Your feedback has been successfully recorded ✅"
+            },
+
             am: {
                 hdrTitle: "የኢትዮጵያ ፌዴራል ፖሊስ",
-                hdrSub: "የዜጎች አስተያየት መስጫ ስርዓት",
+                hdrSub: "የህዝብ አስተያየት መቀበያ ስርዓት",
                 mainHeading: "በተሰጠዎት አገልግሎት ምን ያህል ረክተዋል?",
                 mainDesc: "እባክዎ የተሰማዎትን እርካታ ከታች ከሚገኙት ስሜቶች አንዱን በመምረጥ በዝግታ ይግለጹን።",
-                l1: "በጣም አላረኩም", l2: "አላረኩም", l3: "መካከለኛ", l4: "ረክቻለሁ", l5: "በጣም ረክቻለሁ",
+                l1: "በጣም አላረኩም",
+                l2: "አላረኩም",
+                l3: "መካከለኛ",
+                l4: "ረክቻለሁ",
+                l5: "በጣም ረክቻለሁ",
                 lblComment: "አስተያየትዎን በጽሁፍ ይጻፉ (አማራጭ):",
                 commentPlaceholder: "ስለተሰጠው አገልግሎትዎ ሃሳብ ወይም አስተያየት ይጻፉ...",
                 recStatus: "ድምጽ ለመቅረጽ ማይኩን ይጫኑ",
-                recActive: "ድምጽ በመቅረጽ ላይ ነው...",
-                btnBack: "ተመለስ",
-                btnSubmit: "አስገባና ጨርስ",
-                errRating: "እባክዎ ከመቀጠልዎ በፊት የሬቲንግ ስሜት (Rating) ይምረጡ!",
-                alertMismatch: "Your feedback is not the same with your rate! ‼️ (የሰጡት ሬቲንግ እና የጻፉት አስተያየት እርስ በእርስ ፈጽሞ አያጣምም።)",
-                successTitle: "አመሰግናለሁ! 😊",
-                successDesc: "አስተያየትዎ በተሳካ ሁኔታ ተመዝግቧል ✅"
+                recActive: "እያዳመጠ ነው...",
+                btnBack: "ወደ አገልግሎቶች ተመለስ",
+                btnSubmit: "መዝግብ & ጨርስ",
+                errRating: "እባክዎ አስቀድመው የእርካታ ደረጃዎን ይምረጡ!",
+                alertMismatch: "የጻፉት አስተያየት ከሰጡት የእርካታ ደረጃ ጋር አይጣጣምም! ‼️",
+                successTitle: "እናመሰግናለን! 😊",
+                successDesc: "አስተያየትዎ በጥሩ ሁኔታ ተመዝግቧል ✅"
             },
-            en: {
-                hdrTitle: "Ethiopian Federal Police",
-                hdrSub: "Citizen Feedback System",
-                mainHeading: "How satisfied are you with the service provided?",
-                mainDesc: "Please gently select your satisfaction level from the options below.",
-                l1: "Very Dissatisfied", l2: "Dissatisfied", l3: "Neutral", l4: "Satisfied", l5: "Very Satisfied",
-                lblComment: "Write your comment (Optional):",
-                commentPlaceholder: "Write your thoughts or feedback about the service...",
-                recStatus: "Click mic to record voice",
-                recActive: "Listening...",
-                btnBack: "Back",
-                btnSubmit: "Submit & Finish",
-                errRating: "Please select a rating before proceeding!",
-                alertMismatch: "Your feedback is not the same with your rate! ‼️",
-                successTitle: "thank you! 😊",
-                successDesc: "your feedback has been submitted successfully ✅"
-            },
+
             om: {
-                hdrTitle: "Poolisii Federaalaa Itoophiyaa",
-                hdrSub: "Sirna Yaada Lammiilee",
-                mainHeading: "Tajaajila kennameef hangam quufteetta?",
-                mainDesc: "Maaloo sadarkaa quufaa keessan filannoo gadii irraa filachuudhaan ibsaa.",
-                l1: "Bayyee hin quufne", l2: "Hin quufne", l3: "Giddu-galeessa", l4: "Quufeera", l5: "Bayyee quufeera",
+                hdrTitle: "POLEESII FEDERAALAA ITHYOOPHIYAA",
+                hdrSub: "Sisteema Yaada Uummataa",
+                mainHeading: "Tajaajila kennameen hangam quuftaniirtu?",
+                mainDesc: "Maaloo sadarkaa quufinsa keessaniif asii gadii irraa miira isiniitti dhaga'ame filadhaa.",
+                l1: "Bayyee hin quufne",
+                l2: "Hin quufne",
+                l3: "Gaggaalessa",
+                l4: "Quufeera",
+                l5: "Bayyee quufeera",
                 lblComment: "Yaada keessan barreessaa (Filannoo):",
                 commentPlaceholder: "Yaada yookan ibsa tajaajilichaa barreessaa...",
                 recStatus: "Sagalee galchuuf maayikii cuqaasaa",
@@ -327,12 +490,17 @@
                 successTitle: "Galatoomaa! 😊",
                 successDesc: "Yaadni keessan milkaa'inaan galmeeffameera ✅"
             },
+
             ti: {
                 hdrTitle: "ፌዴራል ፖሊስ ኢትዮጵያ",
                 hdrSub: "ስርዓት ርእይቶ ህዝቢ",
                 mainHeading: "ብዝተወሃበካ ኣገልግሎት ክንደይ ዕጉብ ኢኻ?",
                 mainDesc: "ሕርያ ዕግበትኩም ካብቲ ታሕቲ ዘሎ ምርጫ ብምርካብ ብትሕትና ግለጹና።",
-                l1: "ኣዝየ ኣይዕገብኩን", l2: "ኣይዕገብኩን", l3: "ማእከላይ", l4: "ዕጉብ እየ", l5: "ኣዝየ ዕጉብ እየ",
+                l1: "ኣዝየ ኣይዕገብኩን",
+                l2: "ኣይዕገብኩን",
+                l3: "ማእከላይ",
+                l4: "ዕጉብ እየ",
+                l5: "ኣዝየ ዕጉብ እየ",
                 lblComment: "ርእይቶኹም ብጽሑፍ ጽሓፉ (ግድነት ዘይብሉ):",
                 commentPlaceholder: "ብዛዕባ ዝተወሃበካ ኣገልግሎት ሓሳብ ወይ ርእይቶ ጽሓፉ...",
                 recStatus: "ድምጽ ንምቕራጽ ማይክ ጠውቑ",
@@ -346,54 +514,133 @@
             }
         };
 
-        const t = translations[lang] || translations['en'];
+        const t = translations[lang] || translations.en;
 
-        function applyTranslations() {
-            document.getElementById('hdr-title').textContent = t.hdrTitle;
-            document.getElementById('hdr-sub').textContent = t.hdrSub;
-            document.getElementById('main-heading').textContent = t.mainHeading;
-            document.getElementById('main-desc').textContent = t.mainDesc;
-            document.querySelector('.lbl-1').textContent = t.l1;
-            document.querySelector('.lbl-2').textContent = t.l2;
-            document.querySelector('.lbl-3').textContent = t.l3;
-            document.querySelector('.lbl-4').textContent = t.l4;
-            document.querySelector('.lbl-5').textContent = t.l5;
-            document.getElementById('lbl-comment').textContent = t.lblComment;
-            document.getElementById('user-comment').placeholder = t.commentPlaceholder;
-            document.getElementById('record-status').textContent = t.recStatus;
-            document.getElementById('btn-back').textContent = t.btnBack;
-            document.getElementById('btn-submit').textContent = t.btnSubmit;
-            document.getElementById('success-title-text').textContent = t.successTitle;
-            document.getElementById('success-msg-text').textContent = t.successDesc;
-        }
-        applyTranslations();
+        /* -------------------------------------------------------
+           APPLY TRANSLATIONS
+        ------------------------------------------------------- */
+        document.getElementById('hdr-title').textContent = t.hdrTitle;
+        document.getElementById('hdr-sub').textContent = t.hdrSub;
+        document.getElementById('main-heading').textContent = t.mainHeading;
+        document.getElementById('main-desc').textContent = t.mainDesc;
+        document.querySelector('.lbl-1').textContent = t.l1;
+        document.querySelector('.lbl-2').textContent = t.l2;
+        document.querySelector('.lbl-3').textContent = t.l3;
+        document.querySelector('.lbl-4').textContent = t.l4;
+        document.querySelector('.lbl-5').textContent = t.l5;
+        document.getElementById('lbl-comment').textContent = t.lblComment;
+        document.getElementById('user-comment').placeholder = t.commentPlaceholder;
+        document.getElementById('record-status').textContent = t.recStatus;
+        document.getElementById('btn-back').textContent = t.btnBack;
+        document.getElementById('btn-submit').textContent = t.btnSubmit;
+        document.getElementById('success-title-text').textContent = t.successTitle;
+        document.getElementById('success-msg-text').textContent = t.successDesc;
 
-        /* =================================================================
-           3. Rating selection
-        ==================================================================*/
-        function selectRating(score) {
-            selectedScore = score;
-            for (let i = 1; i <= 5; i++) {
-                document.getElementById(`rate-${i}`).classList.remove('selected');
+        /* -------------------------------------------------------
+           THEME TOGGLE
+        ------------------------------------------------------- */
+        function toggleTheme() {
+            const body = document.body;
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+
+            body.classList.toggle('light-mode');
+
+            if (body.classList.contains('light-mode')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+                text.textContent = 'Light Mode';
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+                text.textContent = 'Dark Mode';
             }
-            document.getElementById(`rate-${score}`).classList.add('selected');
+        }
+
+        /* -------------------------------------------------------
+           RATING SELECTION
+        ------------------------------------------------------- */
+        let selectedScore = '';
+
+        function selectRating(score) {
+            selectedScore = String(score);
+
+            for (let i = 1; i <= 5; i++) {
+                const card = document.getElementById(`rate-${i}`);
+                if (card) {
+                    card.classList.remove('selected');
+                }
+            }
+
+            const selectedCard = document.getElementById(`rate-${selectedScore}`);
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+            }
+
             document.getElementById('alert-box').classList.add('hidden');
         }
 
-        /* =================================================================
-           4. Speech-to-text (comment dictation)
-        ==================================================================*/
+        /* -------------------------------------------------------
+           ENGLISH VOICE GUIDE
+        ------------------------------------------------------- */
+        function readFullUIEnglish() {
+            if (!('speechSynthesis' in window)) {
+                alert("Your browser does not support text-to-speech synthesis.");
+                return;
+            }
+
+            window.speechSynthesis.cancel();
+
+            const enTrans = translations.en;
+
+            const speechText = `
+                Welcome to ${enTrans.hdrTitle}, ${enTrans.hdrSub}.
+                Question: ${enTrans.mainHeading}.
+                Instructions: ${enTrans.mainDesc}.
+                The available rating choices are:
+                Option 1: ${enTrans.l1}.
+                Option 2: ${enTrans.l2}.
+                Option 3: ${enTrans.l3}.
+                Option 4: ${enTrans.l4}.
+                Option 5: ${enTrans.l5}.
+                Feedback field: ${enTrans.lblComment}.
+                You can also click the microphone button to record your voice feedback.
+                Action buttons: Click ${enTrans.btnSubmit} to submit,
+                or click ${enTrans.btnBack} to return.
+            `;
+
+            const utterance = new SpeechSynthesisUtterance(speechText);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.92;
+            utterance.pitch = 1.0;
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        /* -------------------------------------------------------
+           SPEECH-TO-TEXT
+        ------------------------------------------------------- */
         const micBtn = document.getElementById('record-btn');
         const micIcon = document.getElementById('mic-icon');
         const recordStatus = document.getElementById('record-status');
         const commentInput = document.getElementById('user-comment');
 
         if (micBtn && commentInput) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const SpeechRecognition =
+                window.SpeechRecognition || window.webkitSpeechRecognition;
 
             if (SpeechRecognition) {
                 const recognition = new SpeechRecognition();
-                recognition.lang = lang === 'am' ? 'am-ET' : (lang === 'om' ? 'om-ET' : (lang === 'ti' ? 'ti-ET' : 'en-US'));
+
+                recognition.lang =
+                    lang === 'am'
+                        ? 'am-ET'
+                        : lang === 'om'
+                            ? 'om-ET'
+                            : lang === 'ti'
+                                ? 'ti-ET'
+                                : 'en-US';
+
                 recognition.continuous = false;
                 recognition.interimResults = true;
 
@@ -403,34 +650,55 @@
                     try {
                         finalTranscript = '';
                         recognition.start();
-                    } catch (e) {
-                        console.log("Recognition already active", e);
+                    } catch (error) {
+                        console.log("Recognition already active:", error);
                     }
                 });
 
                 recognition.onstart = () => {
                     recordStatus.textContent = t.recActive;
                     micBtn.classList.add('recording-active');
-                    micIcon.classList.remove('fa-microphone', 'text-amber-400');
-                    micIcon.classList.add('fa-stop', 'text-white');
+
+                    micIcon.classList.remove(
+                        'fa-microphone',
+                        'text-amber-400'
+                    );
+
+                    micIcon.classList.add(
+                        'fa-stop',
+                        'text-white'
+                    );
                 };
 
                 recognition.onresult = (event) => {
                     let interim = '';
-                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+
+                    for (
+                        let i = event.resultIndex;
+                        i < event.results.length;
+                        i++
+                    ) {
                         if (event.results[i].isFinal) {
-                            finalTranscript += event.results[i][0].transcript;
+                            finalTranscript +=
+                                event.results[i][0].transcript;
                         } else {
-                            interim += event.results[i][0].transcript;
+                            interim +=
+                                event.results[i][0].transcript;
                         }
                     }
+
                     if (finalTranscript) {
-                        commentInput.value = commentInput.value ? `${commentInput.value} ${finalTranscript}` : finalTranscript;
+                        commentInput.value = commentInput.value
+                            ? `${commentInput.value} ${finalTranscript}`
+                            : finalTranscript;
                     }
                 };
 
                 recognition.onerror = (event) => {
-                    console.error("Speech recognition error:", event.error);
+                    console.error(
+                        "Speech recognition error:",
+                        event.error
+                    );
                     resetMicButton();
                 };
 
@@ -440,48 +708,69 @@
 
                 function resetMicButton() {
                     recordStatus.textContent = t.recStatus;
+
                     micBtn.classList.remove('recording-active');
-                    micIcon.classList.remove('fa-stop', 'text-white');
-                    micIcon.classList.add('fa-microphone', 'text-amber-400');
+
+                    micIcon.classList.remove(
+                        'fa-stop',
+                        'text-white'
+                    );
+
+                    micIcon.classList.add(
+                        'fa-microphone',
+                        'text-amber-400'
+                    );
                 }
             } else {
                 micBtn.style.display = 'none';
             }
         }
 
-        /* =================================================================
-           5. Voice guide (backend gTTS playback)
-        ==================================================================*/
-        function playGttsGuide(text, langCode) {
-            fetch('/text-to-speech', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text, lang: langCode })
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Failed to generate audio via gTTS');
-                return response.blob();
-            })
-            .then(blob => {
+        /* -------------------------------------------------------
+           BACKEND gTTS VOICE GUIDE
+        ------------------------------------------------------- */
+        async function playGttsGuide(text, langCode) {
+            try {
+                const response = await fetch('/text-to-speech', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        lang: langCode
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(
+                        'Failed to generate audio via gTTS.'
+                    );
+                }
+
+                const blob = await response.blob();
                 const audioUrl = URL.createObjectURL(blob);
                 const audio = new Audio(audioUrl);
-                audio.play();
-            })
-            .catch(err => {
-                console.error("gTTS Error:", err);
-            });
+
+                audio.addEventListener(
+                    'ended',
+                    () => URL.revokeObjectURL(audioUrl),
+                    { once: true }
+                );
+
+                await audio.play();
+            } catch (error) {
+                console.error("gTTS Error:", error);
+            }
         }
 
-        /* =================================================================
-           6. Navigation & Submission
-        ==================================================================*/
-        function goBack() {
-            window.location.href = `/services?lang=${lang}`;
-        }
-
-        function validateAndSubmit() {
+        /* -------------------------------------------------------
+           FEEDBACK VALIDATION & SUBMISSION
+        ------------------------------------------------------- */
+        async function validateAndSubmit() {
             const alertBox = document.getElementById('alert-box');
             const alertText = document.getElementById('alert-text');
+            const commentElement = document.getElementById('user-comment');
 
             if (!selectedScore) {
                 alertText.textContent = t.errRating;
@@ -489,69 +778,222 @@
                 return;
             }
 
-            const comment = document.getElementById('user-comment').value.trim().toLowerCase();
+            const rawComment = commentElement.value.trim();
+            const comment = rawComment.toLowerCase();
 
             const negativeKeywords = [
-                'አላረኩም', 'አልረካሁም', 'አላረካሁም', 'መጥፎ', 'ክፉ', 'አይሰራም', 'ዘግዩ', 'ዘግይቷል', 'ችግር',
-                'ደስ አላለኝም', 'አዘንኩ', 'አልወደድኩ', 'አልተመቸኝም', 'አያስደስትም', 'አይረባም',
-                'ጥሩ አይደለም', 'አሪፍ አይደለም', 'ቆንጆ አይደለም', 'አልተሰራም', 'አልተስተናገድኩም',
-                'hin quufne', 'rakkoo', 'gadhee', 'taa\'uu dhabuu', 'ciniinsuu', 'hin jaalanne', 'hin hojjenne',
-                'ኣይዕገብኩን', 'ፉሉይ', 'ሕማቕ', 'ጸገም', 'ዘይተደለየ', 'ኣይፈቶኹዎን', 'ኣይሰርሕን',
-                'bad', 'worst', 'poor', 'useless', 'terrible', 'hate', 'angry', 'not satisfied',
-                'disappointed', 'not good', 'it is not good', "it's not good"
+                'አላረኩም',
+                'አልረካሁም',
+                'አላረካሁም',
+                'መጥፎ',
+                'ክፉ',
+                'አይሰራም',
+                'ዘግዩ',
+                'ዘግይቷል',
+                'ችግር',
+                'ደስ አላለኝም',
+                'አዘንኩ',
+                'አልወደድኩ',
+                'አልተመቸኝም',
+                'አያስደስትም',
+                'አይረባም',
+                'ጥሩ አይደለም',
+                'አሪፍ አይደለም',
+                'ቆንጆ አይደለም',
+                'አልተሰራም',
+                'አልተስተናገድኩም',
+                'hin quufne',
+                'rakkoo',
+                'gadhee',
+                "taa'uu dhabuu",
+                'ciniinsuu',
+                'hin jaalanne',
+                'hin hojjenne',
+                'ኣይዕገብኩን',
+                'ፉሉይ',
+                'ሕማቕ',
+                'ጸገም',
+                'ዘይተደለየ',
+                'ኣይፈቶኹዎን',
+                'ኣይሰርሕን',
+                'bad',
+                'worst',
+                'poor',
+                'useless',
+                'terrible',
+                'hate',
+                'angry',
+                'not satisfied',
+                'disappointed',
+                'not good',
+                'it is not good',
+                "it's not good"
             ];
 
             const positiveKeywords = [
-                'ረክቻለሁ', 'አመሰግናለሁ', 'ጥሩ', 'አሪፍ', 'ፈጣን', 'ደስ ይላል', 'ተመችቶኛል', 'ቆንጆ', 'በጣም ጥሩ', 'ድንቅ',
-                'quufeera', 'bayyee gaarii', 'galatoomaa', 'ayyaana', 'milkaa\'ina', 'baay\'ee gaarii', 'bareedaa',
-                'ዕጉብ እየ', 'የቐንየለይ', 'ጽቡቕ', 'ቅኑዕ', 'ደስ ዝብል', 'ብሉጽ', 'ጽቡቅ',
-                'good', 'great', 'excellent', 'satisfied', 'happy', 'thank', 'wonderful', 'nice', 'awesome'
+                'ረክቻለሁ',
+                'አመሰግናለሁ',
+                'ጥሩ',
+                'አሪፍ',
+                'ፈጣን',
+                'ደስ ይላል',
+                'ተመችቶኛል',
+                'ቆንጆ',
+                'በጣም ጥሩ',
+                'ድንቅ',
+                'quufeera',
+                'bayyee gaarii',
+                'galatoomaa',
+                'ayyaana',
+                "milkaa'ina",
+                "baay'ee gaarii",
+                'bareedaa',
+                'ዕጉብ እየ',
+                'የቐንየለይ',
+                'ጽቡቕ',
+                'ቅኑዕ',
+                'ደስ ዝብል',
+                'ብሉጽ',
+                'ጽቡቅ',
+                'good',
+                'great',
+                'excellent',
+                'satisfied',
+                'happy',
+                'thank',
+                'wonderful',
+                'nice',
+                'awesome'
             ];
 
-            const hasNegative = negativeKeywords.some(w => comment.includes(w));
-            const hasPositive = positiveKeywords.some(w => comment.includes(w));
+            const hasNegative = negativeKeywords.some(
+                word => comment.includes(word)
+            );
 
-            if ((selectedScore === '4' || selectedScore === '5') && hasNegative) {
+            const hasPositive = positiveKeywords.some(
+                word => comment.includes(word)
+            );
+
+            if (
+                (selectedScore === '4' || selectedScore === '5') &&
+                hasNegative
+            ) {
                 alertText.textContent = t.alertMismatch;
                 alertBox.classList.remove('hidden');
                 return;
             }
 
-            if ((selectedScore === '1' || selectedScore === '2') && hasPositive && !hasNegative) {
+            if (
+                (selectedScore === '1' || selectedScore === '2') &&
+                hasPositive &&
+                !hasNegative
+            ) {
                 alertText.textContent = t.alertMismatch;
                 alertBox.classList.remove('hidden');
                 return;
             }
+
+            const emojiMap = {
+                '1': '😡',
+                '2': '🙁',
+                '3': '😐',
+                '4': '😊',
+                '5': '😍'
+            };
+
+            const selectedEmoji =
+                emojiMap[selectedScore] || '😊';
 
             alertBox.classList.add('hidden');
-            
-            fetch('/submit-feedback', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    service: service,
-                    sub_service: subServiceParam,
-                    rating: selectedScore,
-                    comment: document.getElementById('user-comment').value.trim()
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                const modal = document.getElementById('success-modal');
-                const card = document.getElementById('success-card');
-                modal.classList.remove('hidden');
+
+            const submitButton = document.querySelector(
+                'button[onclick="validateAndSubmit()"]'
+            );
+
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.classList.add(
+                    'opacity-60',
+                    'cursor-not-allowed'
+                );
+            }
+
+            try {
+                const response = await fetch('/submit-feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        service: service,
+                        sub_service:
+                            subServiceParam || 'General Service',
+                        rating: selectedEmoji,
+                        comment: rawComment
+                    })
+                });
+
+                const data = await response.json().catch(
+                    () => ({})
+                );
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.message ||
+                        'Submission error. Please try again.'
+                    );
+                }
+
+                console.log("Success:", data);
+
+                const successModal =
+                    document.getElementById('success-modal');
+
+                const successCard =
+                    document.getElementById('success-card');
+
+                successModal.classList.remove('hidden');
+
                 setTimeout(() => {
-                    modal.classList.remove('opacity-0');
-                    card.classList.remove('scale-90');
+                    successModal.style.opacity = '1';
+                    successCard.style.transform = 'scale(1)';
                 }, 50);
 
                 setTimeout(() => {
-                    window.location.href = `/services?lang=${lang}`;
-                }, 2000);
-            })
-            .catch(err => {
-                console.error("Submission error:", err);
-            });
+                    window.location.href = `/?lang=${encodeURIComponent(lang)}`;
+                }, 2500);
+
+            } catch (error) {
+                console.error(
+                    "Error submitting feedback:",
+                    error
+                );
+
+                alertText.textContent =
+                    error.message ||
+                    "Submission error. Please try again.";
+
+                alertBox.classList.remove('hidden');
+
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.classList.remove(
+                        'opacity-60',
+                        'cursor-not-allowed'
+                    );
+                }
+            }
+        }
+
+        /* -------------------------------------------------------
+           NAVIGATION BACK
+        ------------------------------------------------------- */
+        function goBack() {
+            const targetLanguage =
+                encodeURIComponent(lang || 'am');
+
+            window.location.href =
+                `/?lang=${targetLanguage}`;
         }
     </script>
 </body>
