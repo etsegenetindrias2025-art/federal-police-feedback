@@ -468,3 +468,19 @@
     </script>
 </body>
 </html>
+<button onclick="window.print()" class="btn btn-gold">Print / Save as PDF</button>
+<div style="text-align: right; margin: 20px;">
+    <button onclick="window.print()" class="btn btn-gold">Save as PDF / Print</button>
+</div>
+
+<!-- Add this print style block at the bottom of your CSS or inside a <style> tag -->
+<style>
+@media print {
+    button, nav, header {
+        display: none !important;
+    }
+    body {
+        background-color: white !important;
+    }
+}
+</style>

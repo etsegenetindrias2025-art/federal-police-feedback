@@ -2,6 +2,11 @@
    Ethiopian Federal Police - Official Theme
    ========================================== */
 
+@font-face {
+    font-family: 'Ebrima';
+    src: url('../fonts/EBRIMA.TTF') format('truetype');
+}
+
 :root {
   --primary-color: #0d1b2a;       /* Deep Authority Navy */
   --secondary-color: #1b263b;     /* Slate Navy */
@@ -18,7 +23,10 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body, table, th, td {
+  font-family: 'Ebrima', 'Abyssinica SIL', 'DejaVu Sans', sans-serif !important;
 }
 
 body {

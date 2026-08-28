@@ -1127,4 +1127,25 @@ def admin_settings():
 
 
 if __name__ == '__main__':
+    # Optional PDF/font setup. Import inside main to avoid import-time errors in editors
+    try:
+        import os
+        try:
+            from xhtml2pdf import pisa  # type: ignore[import-not-found]  # optional dependency
+        except ImportError:  # pragma: no cover - optional dependency
+            pisa = None
+        # Register the font with ReportLab (if available)
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+
+        # Use app.root_path to locate static files
+        font_path = os.path.join(app.root_path, 'static', 'fonts', 'EBRIMA.TTF')
+        if os.path.exists(font_path):
+            pdfmetrics.registerFont(TTFont('Ebrima', font_path))
+        else:
+            print('Font file not found at path:', font_path)
+    except Exception:
+        # If optional PDF libraries are missing, continue without failing
+        pass
+
     app.run(host='0.0.0.0', port=5000, debug=True)
