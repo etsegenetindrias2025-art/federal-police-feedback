@@ -1,0 +1,585 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Reports - Federal Police Feedback System{% endblock %}
+
+{% block page_title %}Generate Reports{% endblock %}
+{% block page_subtitle %}Create and export feedback reports in multiple formats{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Report Configuration -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-file-alt me-2 text-primary"></i>Report Configuration
+            </div>
+            <div class="card-body">
+                <form id="reportForm" onsubmit="generateReport(event)">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="fas fa-calendar me-1"></i>Date From</label>
+                            <input type="date" class="form-control" id="reportDateFrom" value="{{ (now - timedelta(days=30)).strftime('%Y-%m-%d') }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="fas fa-calendar me-1"></i>Date To</label>
+                            <input type="date" class="form-control" id="reportDateTo" value="{{ now.strftime('%Y-%m-%d') }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="fas fa-tag me-1"></i>Service</label>
+                            <select class="form-select" id="reportService">
+                                <option value="">All Services</option>
+                                {% for service in services %}
+                                <option value="{{ service.id }}">{{ service.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="fas fa-file me-1"></i>Report Type</label>
+                            <select class="form-select" id="reportType">
+                                <option value="summary">Summary Report</option>
+                                <option value="detailed">Detailed Report</option>
+                                <option value="statistics">Statistics Report</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="fas fa-file-export me-1"></i>Export Format</label>
+                            <select class="form-select" id="reportFormat">
+                                <option value="excel">Excel (.xlsx)</option>
+                                <option value="pdf">PDF (.pdf)</option>
+                                <option value="word">Word (.docx)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100" id="generateBtn">
+                                <i class="fas fa-file-export me-1"></i> Generate Report
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-simple me-2 text-primary"></i>Quick Stats
+            </div>
+            <div class="card-body" id="quickStats">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Preview -->
+<div class="card mt-4" id="reportPreviewCard" style="display: none;">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-eye me-2 text-primary"></i>Report Preview</span>
+        <div>
+            <button class="btn btn-sm btn-success" onclick="downloadReport()">
+                <i class="fas fa-download me-1"></i> Download
+            </button>
+            <button class="btn btn-sm btn-info" onclick="shareReport()">
+                <i class="fas fa-share me-1"></i> Share
+            </button>
+        </div>
+    </div>
+    <div class="card-body" id="reportPreviewBody">
+        <div class="table-responsive">
+            <table class="table table-striped" id="previewTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Service</th>
+                        <th>Rating</th>
+                        <th>Comment</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="previewTableBody">
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-3">
+            <span class="badge bg-primary" id="previewCount">0 records</span>
+        </div>
+    </div>
+</div>
+
+<!-- Share Modal -->
+<div class="modal fade" id="shareModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-share-alt me-2"></i>Share Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label"><i class="fas fa-envelope me-1"></i>Email</label>
+                    <div class="input-group">
+                        <input type="email" class="form-control" id="shareEmail" placeholder="recipient@example.com">
+                        <button class="btn btn-primary" onclick="shareViaEmail()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><i class="fas fa-phone me-1"></i>WhatsApp</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="sharePhone" placeholder="+2519XXXXXXXX">
+                        <button class="btn btn-success" onclick="shareViaWhatsApp()">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><i class="fab fa-telegram me-1"></i>Telegram</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="shareTelegram" placeholder="@username">
+                        <button class="btn btn-info" onclick="shareViaTelegram()">
+                            <i class="fab fa-telegram-plane"></i>
+                        </button>
+                        {% extends "admin_base.html" %}
+
+{% block title %}Reports - Federal Police Feedback System{% endblock %}
+
+{% block page_title %}Generate Reports{% endblock %}
+{% block page_subtitle %}Create and export feedback reports in multiple formats{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Report Configuration -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-file-alt me-2 text-primary"></i>Report Configuration
+            </div>
+            <div class="card-body">
+                <form id="reportForm" onsubmit="generateReport(event)">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="fas fa-calendar me-1"></i>Date From</label>
+                            <input type="date" class="form-control" id="reportDateFrom" value="{{ (now - timedelta(days=30)).strftime('%Y-%m-%d') }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="fas fa-calendar me-1"></i>Date To</label>
+                            <input type="date" class="form-control" id="reportDateTo" value="{{ now.strftime('%Y-%m-%d') }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="fas fa-tag me-1"></i>Service</label>
+                            <select class="form-select" id="reportService">
+                                <option value="">All Services</option>
+                                {% for service in services %}
+                                <option value="{{ service.id }}">{{ service.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="fas fa-file me-1"></i>Report Type</label>
+                            <select class="form-select" id="reportType">
+                                <option value="summary">Summary Report</option>
+                                <option value="detailed">Detailed Report</option>
+                                <option value="statistics">Statistics Report</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="fas fa-file-export me-1"></i>Export Format</label>
+                            <select class="form-select" id="reportFormat">
+                                <option value="excel">Excel (.xlsx)</option>
+                                <option value="pdf">PDF (.pdf)</option>
+                                <option value="word">Word (.docx)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100" id="generateBtn">
+                                <i class="fas fa-file-export me-1"></i> Generate Report
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-simple me-2 text-primary"></i>Quick Stats
+            </div>
+            <div class="card-body" id="quickStats">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Preview -->
+<div class="card mt-4" id="reportPreviewCard" style="display: none;">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-eye me-2 text-primary"></i>Report Preview</span>
+        <div>
+            <button class="btn btn-sm btn-success" onclick="downloadReport()">
+                <i class="fas fa-download me-1"></i> Download
+            </button>
+            <button class="btn btn-sm btn-info" onclick="shareReport()">
+                <i class="fas fa-share me-1"></i> Share
+            </button>
+        </div>
+    </div>
+    <div class="card-body" id="reportPreviewBody">
+        <div class="table-responsive">
+            <table class="table table-striped" id="previewTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Service</th>
+                        <th>Rating</th>
+                        <th>Comment</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="previewTableBody">
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-3">
+            <span class="badge bg-primary" id="previewCount">0 records</span>
+        </div>
+    </div>
+</div>
+
+<!-- Share Modal -->
+<div class="modal fade" id="shareModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-share-alt me-2"></i>Share Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label"><i class="fas fa-envelope me-1"></i>Email</label>
+                    <div class="input-group">
+                        <input type="email" class="form-control" id="shareEmail" placeholder="recipient@example.com">
+                        <button class="btn btn-primary" onclick="shareViaEmail()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><i class="fas fa-phone me-1"></i>WhatsApp</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="sharePhone" placeholder="+2519XXXXXXXX">
+                        <button class="btn btn-success" onclick="shareViaWhatsApp()">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><i class="fab fa-telegram me-1"></i>Telegram</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="shareTelegram" placeholder="@username or phone">
+                        <button class="btn btn-info" onclick="shareViaTelegram()">
+                            <i class="fab fa-telegram-plane"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><i class="fas fa-link me-1"></i>Share Link</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="shareLink" readonly>
+                        <button class="btn btn-secondary" onclick="copyShareLink()">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentReportData = null;
+    let currentReportFormat = 'excel';
+    
+    // Load quick stats
+    document.addEventListener('DOMContentLoaded', function() {
+        loadQuickStats();
+    });
+    
+    function loadQuickStats() {
+        fetch('/admin/reports/quick-stats')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('quickStats').innerHTML = `
+                    <div class="mb-3">
+                        <small class="text-muted">Total Feedback</small>
+                        <h4>${data.total}</h4>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Average Rating</small>
+                        <h4>${data.avg_rating} / 5</h4>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-warning" style="width: ${(data.avg_rating / 5 * 100)}%"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">Pending</small>
+                            <h5 class="text-warning">${data.pending}</h5>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Reviewed</small>
+                            <h5 class="text-success">${data.reviewed}</h5>
+                        </div>
+                    </div>
+                    <hr>
+                    <div>
+                        <small class="text-muted">Date Range</small>
+                        <p class="mb-0"><small>${data.date_from} to ${data.date_to}</small></p>
+                    </div>
+                `;
+            })
+            .catch(err => {
+                console.error('Error loading stats:', err);
+                document.getElementById('quickStats').innerHTML = `
+                    <div class="text-center py-4 text-danger">
+                        <i class="fas fa-exclamation-circle fa-2x"></i>
+                        <p class="mt-2">Error loading statistics</p>
+                    </div>
+                `;
+            });
+    }
+    
+    // Generate Report
+    function generateReport(event) {
+        event.preventDefault();
+        
+        const date_from = document.getElementById('reportDateFrom').value;
+        const date_to = document.getElementById('reportDateTo').value;
+        const service_id = document.getElementById('reportService').value;
+        const report_type = document.getElementById('reportType').value;
+        const format = document.getElementById('reportFormat').value;
+        
+        currentReportFormat = format;
+        
+        if (!date_from || !date_to) {
+            showToast('Please select both date ranges', 'danger');
+            return;
+        }
+        
+        showLoading();
+        document.getElementById('generateBtn').disabled = true;
+        document.getElementById('generateBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Generating...';
+        
+        const params = new URLSearchParams({
+            date_from: date_from,
+            date_to: date_to,
+            service_id: service_id,
+            report_type: report_type,
+            format: 'preview'
+        });
+        
+        // First get preview
+        fetch(`/admin/reports/preview?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                currentReportData = data;
+                displayPreview(data, report_type);
+                document.getElementById('reportPreviewCard').style.display = 'block';
+                
+                // Now generate the actual report for download
+                const downloadParams = new URLSearchParams({
+                    date_from: date_from,
+                    date_to: date_to,
+                    service_id: service_id,
+                    report_type: report_type,
+                    format: format
+                });
+                
+                return fetch(`/admin/reports/generate?${downloadParams.toString()}`);
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                window.reportDownloadUrl = url;
+                window.reportBlob = blob;
+                
+                hideLoading();
+                document.getElementById('generateBtn').disabled = false;
+                document.getElementById('generateBtn').innerHTML = '<i class="fas fa-file-export me-1"></i> Generate Report';
+                showToast('Report generated successfully!');
+            })
+            .catch(err => {
+                console.error('Error generating report:', err);
+                hideLoading();
+                document.getElementById('generateBtn').disabled = false;
+                document.getElementById('generateBtn').innerHTML = '<i class="fas fa-file-export me-1"></i> Generate Report';
+                showToast('Error generating report', 'danger');
+            });
+    }
+    
+    function displayPreview(data, reportType) {
+        const tbody = document.getElementById('previewTableBody');
+        const count = document.getElementById('previewCount');
+        
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-4">
+                        <i class="fas fa-inbox fa-2x text-muted d-block mb-2"></i>
+                        No data found for the selected criteria
+                    </td>
+                </tr>
+            `;
+            count.textContent = '0 records';
+            return;
+        }
+        
+        let html = '';
+        data.forEach(item => {
+            const stars = '⭐'.repeat(item.rating || 0);
+            html += `
+                <tr>
+                    <td>#${item.id}</td>
+                    <td>${item.service_name || 'Unknown'}</td>
+                    <td><span class="badge badge-rating badge-rating-${item.rating || 1}">${stars}</span></td>
+                    <td>${(item.comment || '').substring(0, 50)}${(item.comment || '').length > 50 ? '...' : ''}</td>
+                    <td>${item.date || ''}</td>
+                    <td><span class="badge bg-${item.status === 'pending' ? 'warning' : 'success'}">${item.status || 'N/A'}</span></td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = html;
+        count.textContent = `${data.length} records`;
+    }
+    
+    // Download Report
+    function downloadReport() {
+        if (window.reportDownloadUrl) {
+            const a = document.createElement('a');
+            const ext = currentReportFormat === 'excel' ? 'xlsx' : currentReportFormat === 'pdf' ? 'pdf' : 'docx';
+            a.href = window.reportDownloadUrl;
+            a.download = `feedback_report_${new Date().toISOString().slice(0,10)}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            showToast('Download started');
+        } else {
+            showToast('Please generate a report first', 'danger');
+        }
+    }
+    
+    // Share Report
+    function shareReport() {
+        if (!window.reportBlob) {
+            showToast('Please generate a report first', 'danger');
+            return;
+        }
+        
+        const modal = new bootstrap.Modal(document.getElementById('shareModal'));
+        modal.show();
+        
+        // Generate share link (using a temporary URL)
+        const url = window.URL.createObjectURL(window.reportBlob);
+        document.getElementById('shareLink').value = url;
+    }
+    
+    // Share via Email
+    function shareViaEmail() {
+        const email = document.getElementById('shareEmail').value.trim();
+        if (!email) {
+            showToast('Please enter an email address', 'danger');
+            return;
+        }
+        
+        if (!window.reportBlob) {
+            showToast('Please generate a report first', 'danger');
+            return;
+        }
+        
+        showLoading();
+        const formData = new FormData();
+        formData.append('email', email);
+        formData.append('report', window.reportBlob, `report_${new Date().toISOString().slice(0,10)}.${currentReportFormat === 'excel' ? 'xlsx' : currentReportFormat === 'pdf' ? 'pdf' : 'docx'}`);
+        formData.append('format', currentReportFormat);
+        
+        fetch('/admin/reports/share/email', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Report sent via email successfully!');
+                bootstrap.Modal.getInstance(document.getElementById('shareModal')).hide();
+            } else {
+                showToast(data.error || 'Error sending email', 'danger');
+            }
+            hideLoading();
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            hideLoading();
+            showToast('Error sending email', 'danger');
+        });
+    }
+    
+    // Share via WhatsApp
+    function shareViaWhatsApp() {
+        const phone = document.getElementById('sharePhone').value.trim();
+        if (!phone) {
+            showToast('Please enter a phone number', 'danger');
+            return;
+        }
+        
+        // Generate a shareable link
+        const url = window.reportDownloadUrl || window.location.href;
+        const message = `Federal Police Feedback Report\n\nPlease find the report at: ${url}`;
+        const whatsappUrl = `https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+        showToast('Opening WhatsApp...');
+    }
+    
+    // Share via Telegram
+    function shareViaTelegram() {
+        const username = document.getElementById('shareTelegram').value.trim();
+        if (!username) {
+            showToast('Please enter a Telegram username or phone', 'danger');
+            return;
+        }
+        
+        const url = window.reportDownloadUrl || window.location.href;
+        const message = `Federal Police Feedback Report\n\nPlease find the report at: ${url}`;
+        const telegramUrl = `https://t.me/${username.replace('@', '')}?text=${encodeURIComponent(message)}`;
+        window.open(telegramUrl, '_blank');
+        showToast('Opening Telegram...');
+    }
+    
+    // Copy Share Link
+    function copyShareLink() {
+        const link = document.getElementById('shareLink');
+        link.select();
+        document.execCommand('copy');
+        showToast('Link copied to clipboard!');
+    }
+</script>
+{% endblock %}
