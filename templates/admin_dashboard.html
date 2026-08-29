@@ -33,12 +33,6 @@
         .logout-btn { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 10px 22px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px; transition: all 0.3s ease; }
         .logout-btn:hover { transform: translateY(-2px); }
         
-        .dropdown { position: relative; display: inline-block; }
-        .dropdown-content { display: none; position: absolute; right: 0; background-color: #111827; min-width: 240px; box-shadow: 0px 10px 25px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; z-index: 1001; overflow: hidden; }
-        .dropdown-content a { color: #f3f4f6; padding: 12px 16px; text-decoration: none; display: block; font-size: 13px; transition: 0.2s; cursor: pointer; }
-        .dropdown-content a:hover { background-color: rgba(56,189,248,0.15); color: #38bdf8; }
-        .dropdown.active .dropdown-content { display: block; }
-
         .container { max-width: 1400px; margin: 35px auto; padding: 0 25px; width: 100%; flex: 1; }
         .dashboard-container { min-height: 100vh; padding-bottom: 80px; }
         
@@ -120,6 +114,15 @@
         .share-btn.email { color: #f87171; }
         .modal-close { background: #1f2937; border: none; color: #9ca3af; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%; margin-top: 10px; transition: 0.2s; }
         .modal-close:hover { background: #374151; color: white; }
+
+        @media print {
+            button, nav, header {
+                display: none !important;
+            }
+            body {
+                background-color: white !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -154,7 +157,7 @@
             <!-- Dashboard Header Info -->
             <div class="dashboard-header">
                 <div>
-                    <h2>{{ admin_title | default('Admin Dashboard') }}</h2>
+                    <h2>{{ admin_title | default('General Admin Dashboard') }}</h2>
                     <p>{% if is_general %}Complete system overview with analytics and folder filters.{% else %}Viewing direct database records for your assigned department.{% endif %}</p>
                 </div>
                 <div class="header-controls">
@@ -468,19 +471,3 @@
     </script>
 </body>
 </html>
-<button onclick="window.print()" class="btn btn-gold">Print / Save as PDF</button>
-<div style="text-align: right; margin: 20px;">
-    <button onclick="window.print()" class="btn btn-gold">Save as PDF / Print</button>
-</div>
-
-<!-- Add this print style block at the bottom of your CSS or inside a <style> tag -->
-<style>
-@media print {
-    button, nav, header {
-        display: none !important;
-    }
-    body {
-        background-color: white !important;
-    }
-}
-</style>

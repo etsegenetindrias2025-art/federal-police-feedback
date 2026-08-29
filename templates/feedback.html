@@ -371,25 +371,6 @@
                 <i class="fa-solid fa-volume-high text-amber-400"></i>
                 Amharic Voice Guide
             </button>
-
-            <button
-                type="button"
-                onclick="playGttsGuide('Maaloo sadarkaa quufaa keessan filadhaa, yaada keessanis gadiitti barreessaa.', 'om')"
-                class="voice-btn"
-            >
-                <i class="fa-solid fa-volume-high text-amber-400"></i>
-                Afaan Oromoo Voice Guide
-            </button>
-
-            <button
-                type="button"
-                onclick="playGttsGuide('ብዝተወሃበካ ኣገልግሎት ዘለካ ዕግበት ብምርጫ ግለጽ።', 'ti')"
-                class="voice-btn"
-            >
-                <i class="fa-solid fa-volume-high text-amber-400"></i>
-                Tigrinya Voice Guide
-            </button>
-
             <button
                 type="button"
                 onclick="readFullUIEnglish()"
@@ -468,50 +449,6 @@
                 successTitle: "እናመሰግናለን! 😊",
                 successDesc: "አስተያየትዎ በጥሩ ሁኔታ ተመዝግቧል ✅"
             },
-
-            om: {
-                hdrTitle: "POLEESII FEDERAALAA ITHYOOPHIYAA",
-                hdrSub: "Sisteema Yaada Uummataa",
-                mainHeading: "Tajaajila kennameen hangam quuftaniirtu?",
-                mainDesc: "Maaloo sadarkaa quufinsa keessaniif asii gadii irraa miira isiniitti dhaga'ame filadhaa.",
-                l1: "Bayyee hin quufne",
-                l2: "Hin quufne",
-                l3: "Gaggaalessa",
-                l4: "Quufeera",
-                l5: "Bayyee quufeera",
-                lblComment: "Yaada keessan barreessaa (Filannoo):",
-                commentPlaceholder: "Yaada yookan ibsa tajaajilichaa barreessaa...",
-                recStatus: "Sagalee galchuuf maayikii cuqaasaa",
-                recActive: "Dhaggeeffachaa jira...",
-                btnBack: "Duubatti deebi'i",
-                btnSubmit: "Galchi & Xumuri",
-                errRating: "Maaloo osoo hin itti fufin dura sadarkaa quufaa filadhaa!",
-                alertMismatch: "Yaadni keessan sadarkaa kennitan wajjin wal hin simu! ‼️",
-                successTitle: "Galatoomaa! 😊",
-                successDesc: "Yaadni keessan milkaa'inaan galmeeffameera ✅"
-            },
-
-            ti: {
-                hdrTitle: "ፌዴራል ፖሊስ ኢትዮጵያ",
-                hdrSub: "ስርዓት ርእይቶ ህዝቢ",
-                mainHeading: "ብዝተወሃበካ ኣገልግሎት ክንደይ ዕጉብ ኢኻ?",
-                mainDesc: "ሕርያ ዕግበትኩም ካብቲ ታሕቲ ዘሎ ምርጫ ብምርካብ ብትሕትና ግለጹና።",
-                l1: "ኣዝየ ኣይዕገብኩን",
-                l2: "ኣይዕገብኩን",
-                l3: "ማእከላይ",
-                l4: "ዕጉብ እየ",
-                l5: "ኣዝየ ዕጉብ እየ",
-                lblComment: "ርእይቶኹም ብጽሑፍ ጽሓፉ (ግድነት ዘይብሉ):",
-                commentPlaceholder: "ብዛዕባ ዝተወሃበካ ኣገልግሎት ሓሳብ ወይ ርእይቶ ጽሓፉ...",
-                recStatus: "ድምጽ ንምቕራጽ ማይክ ጠውቑ",
-                recActive: "ድምጽ ይቐዳሕ ኣሎ...",
-                btnBack: "ንድሕሪት ተመለስ",
-                btnSubmit: "እቱ & ወዳእ",
-                errRating: "ብቐዳምነት ናይ ደረጃ ምልክት (Rating) ምረጹ!",
-                alertMismatch: "ዝሃብዎ ደረጃን ዝጸሓፍዎ ርእይቶን ፈጺሞም ኣይሰማዕን! ‼️",
-                successTitle: "የቐንየለይ! 😊",
-                successDesc: "ርእይቶኹም ብትኽክል ተመዝጊቡ ኣሎ ✅"
-            }
         };
 
         const t = translations[lang] || translations.en;
@@ -635,10 +572,8 @@
                 recognition.lang =
                     lang === 'am'
                         ? 'am-ET'
-                        : lang === 'om'
-                            ? 'om-ET'
-                            : lang === 'ti'
-                                ? 'ti-ET'
+                                : lang === 'en'
+                                ? 'en-US'
                                 : 'en-US';
 
                 recognition.continuous = false;

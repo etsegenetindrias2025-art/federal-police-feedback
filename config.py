@@ -1,0 +1,1 @@
+SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:2323@localhost:5432/federal_police_feedback'

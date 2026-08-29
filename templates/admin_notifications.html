@@ -1,73 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notifications - Ethiopian Federal Police</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #05070b; color: #f3f4f6; min-height: 100vh; display: flex; flex-direction: column; }
-        header { background: rgba(11, 15, 25, 0.95); backdrop-filter: blur(12px); padding: 18px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); }
-        .logo-area { display: flex; align-items: center; gap: 15px; text-decoration: none; }
-        .logo-area img { width: 50px; height: 50px; object-fit: contain; }
-        .logo-area h1 { font-size: 20px; color: #fff; font-weight: 700; }
-        .logo-area p { font-size: 11px; color: #38bdf8; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
-        .container { max-width: 900px; margin: 40px auto; padding: 0 20px; width: 100%; }
-        .notif-card { background: #111827; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 35px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
-        h2 { font-size: 24px; color: #fff; margin-bottom: 10px; }
-        p.subtitle { color: #9ca3af; font-size: 14px; margin-bottom: 30px; }
-        .notif-item { background: #1a2234; border: 1px solid rgba(255,255,255,0.05); padding: 16px 20px; border-radius: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-        .notif-text h4 { font-size: 15px; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .notif-text p { font-size: 13px; color: #9ca3af; margin-top: 4px; }
-        .notif-time { font-size: 12px; color: #38bdf8; font-weight: 600; white-space: nowrap; margin-left: 15px; }
-        .badge-service { background: rgba(56, 189, 248, 0.1); color: #38bdf8; padding: 2px 8px; border-radius: 6px; font-size: 11px; border: 1px solid rgba(56, 189, 248, 0.2); text-transform: capitalize; }
-        .badge-subservice { background: rgba(16, 185, 129, 0.1); color: #34d399; padding: 2px 8px; border-radius: 6px; font-size: 11px; border: 1px solid rgba(16, 185, 129, 0.2); text-transform: capitalize; }
-        .no-data { text-align: center; padding: 40px; color: #9ca3af; }
-    </style>
+<meta charset="UTF-8">
+<title>Notifications - Ethiopian Federal Police</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI', Arial, sans-serif; background:#0b1622; color:#e6edf3; }
+  header {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:20px 40px; background:#0f1e2e; border-bottom:1px solid #1c2c3d;
+  }
+  .brand h1 { font-size:18px; color:#fff; }
+  .brand span { display:block; font-size:11px; letter-spacing:1px; color:#7fa8c9; margin-top:2px; }
+  .back-link { color:#7fa8c9; text-decoration:none; font-size:14px; }
+  .back-link:hover { color:#fff; }
+  main { max-width:900px; margin:40px auto; padding:0 20px 60px; }
+  main h2 { font-size:26px; color:#fff; margin-bottom:6px; }
+  main p.subtitle { color:#8ea3b8; margin-bottom:24px; font-size:14px; }
+  .notif-card {
+    background:#0f1e2e; border:1px solid #1c2c3d; border-radius:8px;
+    padding:16px 20px; margin-bottom:14px;
+    display:flex; justify-content:space-between; align-items:flex-start; gap:16px;
+  }
+  .notif-left { flex:1; min-width:0; }
+  .notif-title {
+    font-weight:600; color:#fff; margin-bottom:8px;
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  }
+  .badge { font-size:11px; padding:3px 9px; border-radius:10px; font-weight:600; white-space:nowrap; }
+  .badge-service { background:#1f4e8c; color:#bfe0ff; }
+  .badge-sub { background:#1f6b4c; color:#c8f5df; }
+  .notif-detail { color:#a9bcce; font-size:13px; line-height:1.5; }
+  .notif-time { color:#5aa9e6; font-size:12px; white-space:nowrap; }
+  .empty { text-align:center; padding:60px 0; color:#7fa8c9; }
+</style>
 </head>
 <body>
-    <header>
-        <a href="{{ url_for('admin_dashboard') }}" class="logo-area">
-            <img src="{{ url_for('static', filename='images/police_logo.png') }}" alt="Logo">
-            <div>
-                <h1>Ethiopian Federal Police</h1>
-                <p>Feedback Management Dashboard</p>
-            </div>
-        </a>
-        <a href="{{ url_for('admin_dashboard') }}" style="color:#9ca3af; text-decoration:none; font-weight:600;">← Back to Dashboard</a>
-    </header>
-    
+<header>
+  <div class="brand">
+    <h1>Ethiopian Federal Police</h1>
+    <span>FEEDBACK MANAGEMENT DASHBOARD</span>
+  </div>
+  <a class="back-link" href="{{ url_for('admin_dashboard') }}">&larr; Back to Dashboard</a>
+</header>
+<main>
+  <h2>System Notifications</h2>
+  <p class="subtitle">Real-time logs and alerts regarding user feedback submissions for your department.</p>
 
-    <div class="container">
-        <div class="notif-card">
-            <h2>System Notifications</h2>
-            <p class="subtitle">Real-time logs and alerts regarding user feedback submissions for your department.</p>
-            
-            <div id="notifications-list">
-                {% if notifications %}
-                    {% for notif in notifications %}
-                    <div class="notif-item">
-                        <div class="notif-text">
-                            <h4>
-                                New Feedback Received 
-                                {% set s_key = notif.service_name | string | lower | trim %}
-                                <span class="badge-service">{{ service_map.get(s_key, notif.service_name) if service_map is defined else notif.service_name }}</span>
-                                {% if notif.sub_service %}
-                                <span class="badge-subservice">↳ {{ notif.sub_service }}</span>
-                                {% endif %}
-                            </h4>
-                            <p>Rating: <b>{{ notif.rating }}</b> — "{{ notif.comment if notif.comment else 'No comment provided.' }}"</p>
-                        </div>
-                        <span class="notif-time">{{ notif.timestamp }}</span>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="no-data">
-                        <p>No new system notifications available for your department.</p>
-                    </div>
-                {% endif %}
-            </div>
+  {% if notifications and notifications|length > 0 %}
+    {% for n in notifications %}
+    <div class="notif-card">
+      <div class="notif-left">
+        <div class="notif-title">
+          New Feedback Received
+          <span class="badge badge-service">{{ service_map.get(n.service_name, n.service_name) }}</span>
+          <span class="badge badge-sub">
+            {{ sub_service_map.get(n.service_name, {}).get(n.sub_service, n.sub_service) }}
+          </span>
         </div>
+        <div class="notif-detail">
+          Rating: {{ n.rating }}{% if n.comment and n.comment != 'No comment provided.' %} &mdash; &ldquo;{{ n.comment }}&rdquo;{% endif %}
+        </div>
+      </div>
+      <div class="notif-time">{{ n.timestamp.strftime('%Y-%m-%d %H:%M:%S') if n.timestamp else '' }}</div>
     </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">No notifications yet.</div>
+  {% endif %}
+</main>
 </body>
 </html>

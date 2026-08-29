@@ -1,72 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Audit Logs - Ethiopian Federal Police</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #05070b; color: #f3f4f6; min-height: 100vh; display: flex; flex-direction: column; }
-        header { background: rgba(11, 15, 25, 0.95); padding: 18px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); }
-        .container { max-width: 1400px; margin: 35px auto; padding: 0 25px; width: 100%; flex: 1; }
-        .back-btn { background: #1a2234; border: 1px solid rgba(255,255,255,0.1); color: #f3f4f6; padding: 10px 18px; border-radius: 10px; text-decoration: none; font-weight: 600; display: inline-block; margin-bottom: 20px; }
-        .back-btn:hover { background: #222d44; }
-        .card { background: #111827; border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; padding: 25px; }
-        h2 { color: #fff; margin-bottom: 20px; font-size: 24px; }
-        table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 15px; }
-        th, td { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #e5e7eb; font-size: 14px; }
-        th { background: #1a2234; color: #9ca3af; text-transform: uppercase; font-size: 12px; }
-    </style>
+<meta charset="UTF-8">
+<title>Audit Logs - Ethiopian Federal Police</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI', Arial, sans-serif; background:#0b1622; color:#e6edf3; }
+  header {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:20px 40px; background:#0f1e2e; border-bottom:1px solid #1c2c3d;
+  }
+  header h1 { font-size:16px; color:#fff; display:flex; align-items:center; gap:8px; }
+  .back-btn, .return-btn {
+    background:#16283b; color:#cfe4f7; border:1px solid #244b6b;
+    padding:8px 16px; border-radius:6px; text-decoration:none; font-size:13px;
+  }
+  .back-btn:hover, .return-btn:hover { background:#1d3a55; }
+  main { max-width:1100px; margin:30px auto; padding:0 20px 60px; }
+  .return-btn { display:inline-block; margin-bottom:20px; }
+  .card { background:#0f1e2e; border:1px solid #1c2c3d; border-radius:8px; padding:24px; }
+  .card h2 { color:#f2b544; font-size:20px; margin-bottom:4px; }
+  .card p.desc { color:#8ea3b8; font-size:13px; margin-bottom:20px; }
+  table { width:100%; border-collapse:collapse; }
+  th {
+    text-align:left; font-size:12px; color:#7fa8c9; text-transform:uppercase;
+    letter-spacing:0.5px; padding:10px 12px; border-bottom:1px solid #1c2c3d;
+  }
+  td { padding:12px; font-size:14px; border-bottom:1px solid #16232f; color:#dbe6ef; }
+  tr:hover td { background:#101d2b; }
+  .empty-row td { text-align:center; color:#7fa8c9; padding:40px 0; }
+</style>
 </head>
 <body>
-
-    <header>
-        <h1 style="font-size: 20px; color: #fff;">Ethiopian Federal Police - Audit Logs</h1>
-        <a href="{{ url_for('admin_dashboard') }}" class="back-btn" style="margin:0;">Back to Dashboard</a>
-    </header>
-
-    <div class="container">
-        <a href="{{ url_for('admin_dashboard') }}" class="back-btn"><i class="fas fa-arrow-left"></i> Return to Dashboard</a>
-        
-        <div class="card">
-            <h2>📜 {% if admin_type == 'general' %}Global System Audit Trail{% else %}My Activity Audit Trail{% endif %}</h2>
-            <p style="color: #9ca3af; margin-bottom: 20px;">
-                {% if admin_type == 'general' %}
-                    Review administrative actions, database changes, and security events across all system administrators.
-                {% else %}
-                    Review your personal administrative actions and security history within the system.
-                {% endif %}
-            </p>
-            
-            <table>
-                <thead>
-                    <tr>
-                        <th>Log ID</th>
-                        <th>Admin User</th>
-                        <th>Action Description</th>
-                        <th>Timestamp</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% if audit_logs %}
-                        {% for log in audit_logs %}
-                        <tr>
-                            <td>#{{ log.id }}</td>
-                            <td>{{ log.admin_user }}</td>
-                            <td>{{ log.action_description }}</td>
-                            <td>{{ log.timestamp }}</td>
-                        </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr>
-                            <td colspan="4" style="text-align: center; color: #9ca3af; padding: 40px;">No audit logs recorded yet.</td>
-                        </tr>
-                    {% endif %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
+<header>
+  <h1>&#128737;&#65039; {{ 'Ethiopian Federal Police - Audit Logs' }}</h1>
+  <a class="back-btn" href="{{ url_for('admin_dashboard') }}">&larr; Dashboard</a>
+</header>
+<main>
+  <a class="return-btn" href="{{ url_for('admin_dashboard') }}">&larr; Return to Dashboard</a>
+  <div class="card">
+    <h2>&#128203; {{ 'System Audit Trail' if is_general_admin else 'My Activity Audit Trail' }}</h2>
+    <p class="desc">
+      {% if is_general_admin %}
+        Review all administrative actions and security history across the system.
+      {% else %}
+        Review your personal administrative actions and security history within the system.
+      {% endif %}
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Log ID</th>
+          <th>Admin User</th>
+          <th>Action Description</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if logs and logs|length > 0 %}
+          {% for log in logs %}
+          <tr>
+            <td>#{{ log.id }}</td>
+            <td>{{ log.admin_user }}</td>
+            <td>{{ log.action_description }}</td>
+            <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else '' }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr class="empty-row"><td colspan="4">No audit logs recorded yet.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</main>
 </body>
 </html>

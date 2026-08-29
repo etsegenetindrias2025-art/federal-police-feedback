@@ -299,16 +299,6 @@
                     <span class="main-lbl">አማርኛ</span>
                     <span class="sub-lbl">Amharic</span>
                 </a>
-
-                <a href="{{ url_for('services', lang='om') }}" class="lang-card">
-                    <span class="main-lbl">Afaan Oromoo</span>
-                    <span class="sub-lbl">Oromic</span>
-                </a>
-
-                <a href="{{ url_for('services', lang='ti') }}" class="lang-card">
-                    <span class="main-lbl">ትግርኛ</span>
-                    <span class="sub-lbl">Tigrigna</span>
-                </a>
             </div>
         </div>
 
@@ -317,8 +307,6 @@
             <div class="voice-buttons">
                 <button onclick="readFullPageEnglish()" class="voice-btn" type="button">🔊 English</button>
                 <button onclick="playVoiceGuide('እንኳን ወደ ኢትዮጵያ ፌዴራል ፖሊስ የህዝብ አስተያየት መስጫ ስርዓት በደህና መጡ።', 'am')" class="voice-btn" type="button">🔊 አማርኛ</button>
-                <button onclick="playVoiceGuide('Baga nagaan dhuftan Sistema yaada kennisa Poolisii Federaalaa Itoophiyaa.', 'om')" class="voice-btn" type="button">🔊 Afaan Oromoo</button>
-                <button onclick="playVoiceGuide('ናብ ስርዓት ርእይቶ ህዝቢ ፌደራል ፖሊስ ኢትዮጵያ ብሰላም መጻእኩም።', 'ti')" class="voice-btn" type="button">🔊 ትግርኛ</button>
             </div>
         </div>
 
@@ -363,9 +351,7 @@
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = lang === 'am' ? 'am-ET' : 
-                                 (lang === 'om' ? 'om-ET' : 
-                                 (lang === 'ti' ? 'ti-ER' : 'en-US'));
+                utterance.lang = (lang === 'am') ? 'am-ET' : 'en-US';
                 utterance.rate = 0.9;
                 window.speechSynthesis.speak(utterance);
             }

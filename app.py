@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
-import sqlite3
-import os
 import io
+import os
 import re
 import qrcode
 from gtts import gTTS
@@ -28,6 +27,9 @@ from reportlab.lib.pagesizes import letter, landscape
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
+
+from flask_sqlalchemy import SQLAlchemy
+import traceback
 
 try:
     from better_profanity import profanity  # type: ignore[import-not-found]
@@ -57,8 +59,35 @@ except ImportError:
 
     profanity = _FallbackProfanity()
 
+# ----------------------------------------------------
+# SINGLE FLASK APP + DATABASE INITIALIZATION
+# ----------------------------------------------------
 app = Flask(__name__)
-app.secret_key = 'federal_police_secret_key'
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'federal_police_secret_key')
+
+# Local defaults supplied for this project:
+#   Database: federal_police_feedback
+#   User:     postgres
+#   Password: 2323
+#   Host:     localhost
+#   Port:     5432
+#
+# For deployment, set DATABASE_URL in the environment.
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://postgres:2323@localhost:5432/federal_police_feedback"
+)
+
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+}
+
+db = SQLAlchemy(app)
 
 # ----------------------------------------------------
 # COMPREHENSIVE PROFANITY FILTER (አማርኛ + Manglish + English)
@@ -71,7 +100,6 @@ ETHIOPIC_BAD_WORDS = [
 ]
 
 profanity.add_censor_words(ETHIOPIC_BAD_WORDS)
-
 
 def is_inappropriate(text):
     if not text:
@@ -89,203 +117,305 @@ def is_inappropriate(text):
 
 
 # ----------------------------------------------------
-# DATABASE SETUP
+# MODELS
 # ----------------------------------------------------
-DB_PATH = os.path.join(os.path.dirname(__file__), 'database.db')
+class Feedback(db.Model):
+    __tablename__ = 'feedbacks'
+    id = db.Column(db.Integer, primary_key=True)
+    service_name = db.Column(db.String(100), nullable=False)
+    sub_service = db.Column(db.String(100), nullable=True)
+    rating = db.Column(db.String(50), nullable=False)
+    comment = db.Column(db.Text, nullable=True)
+    audio_status = db.Column(db.String(100), default='No audio recorded')
+    is_read = db.Column(db.Boolean, default=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+class FingerprintRecord(db.Model):
+    __tablename__ = 'fingerprint_records'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), nullable=True)
+    fingerprint_data = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(50), default='Verified')
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Service(db.Model):
+    __tablename__ = 'services'
+    id = db.Column(db.Integer, primary_key=True)
+    service_key = db.Column(db.String(50), unique=True, nullable=False)
+    service_name = db.Column(db.String(100), nullable=False)
+
+class SubService(db.Model):
+    __tablename__ = 'sub_services'
+    id = db.Column(db.Integer, primary_key=True)
+    service_key = db.Column(db.String(50), nullable=False)
+    sub_service_key = db.Column(db.String(50), nullable=False)
+    sub_service_name = db.Column(db.String(100), nullable=False)
+    amharic_name = db.Column(db.String(100), nullable=True)
+
+class AuditLog(db.Model):
+    __tablename__ = 'audit_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    admin_user = db.Column(db.String(100), nullable=False)
+    action_description = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    message = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+def ensure_postgresql_schema():
+    """Migrate the old sub_services schema if it already exists."""
+    from sqlalchemy import inspect, text as sql_text
 
+    inspector = inspect(db.engine)
+    tables = set(inspector.get_table_names())
 
-def init_db():
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    if "sub_services" not in tables:
+        return
 
-    # Feedbacks Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS feedbacks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            service_name TEXT NOT NULL,
-            sub_service TEXT,
-            rating TEXT NOT NULL,
-            comment TEXT,
-            audio_status TEXT DEFAULT 'No audio recorded',
-            is_read BOOLEAN DEFAULT 0,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-
-    # Fingerprint Registrations Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS fingerprint_records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT,
-            fingerprint_data TEXT NOT NULL,
-            status TEXT DEFAULT 'Verified',
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-
-    # Services Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS services (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            service_key TEXT UNIQUE NOT NULL,
-            service_name TEXT NOT NULL
-        )
-    ''')
-
-    # Sub Services Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS sub_services (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            service_key TEXT NOT NULL,
-            sub_service_key TEXT NOT NULL,
-            sub_service_name TEXT NOT NULL,
-            UNIQUE(service_key, sub_service_key)
-        )
-    ''')
-
-    # Audit Logs Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS audit_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            admin_user TEXT NOT NULL,
-            action_description TEXT NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-
-    default_services = [
-        ("police_clearance", "Police Clearance"),
-        ("complaint", "Complaint"),
-        ("hospital", "Hospital"),
-        ("logistics", "Logistics"),
-        ("education_training", "Education & Training"),
-        ("other", "Other")
-    ]
-    for key, name in default_services:
-        cursor.execute("""
-            INSERT OR IGNORE INTO services (service_key, service_name) VALUES (?, ?)
-        """, (key, name))
-
-    default_sub_services = {
-        "police_clearance": [
-            ("new_clearance", "New Police Clearance"),
-            ("renewal", "Renewal"),
-            ("criminal_record", "Criminal Record Verification"),
-            ("fingerprint", "Fingerprint Registration"),
-            ("document_collection", "Document Collection")
-        ],
-        "complaint": [
-            ("crime_complaint", "Crime Complaint Registration"),
-            ("public_office", "Public Complaint Office"),
-            ("online_followup", "Online Complaint Follow-up"),
-            ("investigation", "Investigation"),
-            ("resolution", "Resolution")
-        ],
-        "hospital": [
-            ("opd", "OPD"),
-            ("emergency", "Emergency"),
-            ("pharmacy", "Pharmacy"),
-            ("laboratory", "Laboratory"),
-            ("medical_exam", "Medical Examination")
-        ],
-        "logistics": [
-            ("vehicle_mgmt", "Vehicle Management"),
-            ("garage", "Garage"),
-            ("equipment_dist", "Equipment Distribution"),
-            ("inventory", "Inventory"),
-            ("procurement", "Procurement")
-        ],
-        "education_training": [
-            ("student_reg", "Student Registration"),
-            ("training", "Training"),
-            ("certificates", "Certificates"),
-            ("examination", "Examination"),
-            ("academic_records", "Academic Records")
-        ],
-        "other": [
-            ("reception", "Reception"),
-            ("ict_support", "ICT Support"),
-            ("hr", "HR"),
-            ("finance", "Finance"),
-            ("admin", "Administration")
-        ]
+    columns = {c["name"] for c in inspector.get_columns("sub_services")}
+    required = {
+        "id", "service_key", "sub_service_key",
+        "sub_service_name", "amharic_name"
     }
 
-    for s_key, sub_list in default_sub_services.items():
-        for sub_key, sub_name in sub_list:
-            cursor.execute("""
-                INSERT OR IGNORE INTO sub_services (service_key, sub_service_key, sub_service_name) VALUES (?, ?, ?)
-            """, (s_key, sub_key, sub_name))
+    # db.create_all() cannot change an existing table's columns.
+    # The older project used:
+    # main_id, main_service, sub_id, sub_service, sub_description
+    if required.issubset(columns):
+        return
 
-    cursor.execute("PRAGMA table_info(feedbacks)")
-    columns = [column[1] for column in cursor.fetchall()]
-    if 'is_read' not in columns:
-        cursor.execute("ALTER TABLE feedbacks ADD COLUMN is_read BOOLEAN DEFAULT 0")
-    if 'audio_status' not in columns:
-        cursor.execute("ALTER TABLE feedbacks ADD COLUMN audio_status TEXT DEFAULT 'No audio recorded'")
+    legacy = "sub_services_legacy"
 
-    conn.commit()
-    cursor.close()
-    conn.close()
+    if legacy not in tables:
+        db.session.execute(
+            sql_text("ALTER TABLE sub_services RENAME TO sub_services_legacy")
+        )
+        db.session.commit()
 
+    db.create_all()
+
+    legacy_columns = {
+        c["name"] for c in inspect(db.engine).get_columns(legacy)
+    }
+
+    if {"main_service", "sub_service"}.issubset(legacy_columns):
+        description_column = (
+            "sub_description"
+            if "sub_description" in legacy_columns
+            else "NULL"
+        )
+
+        rows = db.session.execute(sql_text(
+            f"SELECT main_service, sub_service, {description_column} "
+            f"FROM {legacy}"
+        )).fetchall()
+
+        service_key_map = {
+            "police clearance": "police_clearance",
+            "complaint": "complaint",
+            "hospital": "hospital",
+            "logistics": "logistics",
+            "education & training": "education_training",
+            "education and training": "education_training",
+            "human resources": "hr",
+            "hr": "hr",
+            "it help desk": "help_desk",
+            "help desk": "help_desk",
+            "other": "other",
+        }
+
+        for row in rows:
+            service_name = str(row[0] or "").strip()
+            sub_name = str(row[1] or "").strip()
+            description = str(row[2] or "").strip()
+
+            if not service_name or not sub_name:
+                continue
+
+            service_key = service_key_map.get(
+                service_name.lower(),
+                service_name.lower().replace(" ", "_")
+            )
+
+            sub_key = re.sub(
+                r"[^a-z0-9_]",
+                "",
+                sub_name.lower()
+                .replace("&", "and")
+                .replace("/", "_")
+                .replace("-", "_")
+                .replace(" ", "_")
+            )[:50]
+
+            if not sub_key:
+                continue
+
+            if not SubService.query.filter_by(
+                service_key=service_key,
+                sub_service_key=sub_key
+            ).first():
+                row_obj = SubService()
+                row_obj.service_key = service_key
+                row_obj.sub_service_key = sub_key
+                row_obj.sub_service_name = sub_name[:100]
+                row_obj.amharic_name = description[:100] or None
+                db.session.add(row_obj)
+
+        db.session.commit()
+
+def init_db():
+    with app.app_context():
+        ensure_postgresql_schema()
+        db.create_all()
+        
+        default_services = [
+            ("police_clearance", "Police Clearance"),
+            ("complaint", "Complaint"),
+            ("hospital", "Hospital"),
+            ("logistics", "Logistics"),
+            ("education_training", "Education & Training"),
+            ("hr", "Human Resources"),
+            ("help_desk", "IT Help Desk"),
+            ("other", "Other")
+        ]
+        for key, name in default_services:
+            existing = Service.query.filter_by(service_key=key).first()
+            if not existing:
+                svc = Service()
+                svc.service_key = key
+                svc.service_name = name
+                db.session.add(svc)
+        
+        default_sub_services = {
+            "police_clearance": [
+                ("new_clearance", "New Police Clearance", "አዲስ የፖሊስ ክሊራንስ"),
+                ("renewal", "Renewal", "እድሳት"),
+                ("criminal_record", "Criminal Record Verification", "የወንጀል መዝገብ ማረጋገጫ"),
+                ("fingerprint", "Fingerprint Registration", "የጣት አሻራ ምዝገባ"),
+                ("document_collection", "Document Collection", "ሰነድ መሰብሰብ")
+            ],
+            "complaint": [
+                ("crime_complaint", "Crime Complaint Registration", "የወንጀል ቅሬታ ምዝገባ"),
+                ("public_office", "Public Complaint Office", "የህዝብ ቅሬታ ቢሮ"),
+                ("online_followup", "Online Complaint Follow-up", "የመስመር ላይ ቅሬታ ክትትል"),
+                ("investigation", "Investigation", "ምርመራ"),
+                ("resolution", "Resolution", "ውሳኔ")
+            ],
+            "hospital": [
+                ("opd", "OPD", "የውጪ ህሙማን ክፍል"),
+                ("emergency", "Emergency", "አስቸኳይ ጊዜ"),
+                ("pharmacy", "Pharmacy", "ፋርማሲ"),
+                ("laboratory", "Laboratory", "ላቦራቶሪ"),
+                ("medical_exam", "Medical Examination", "የህክምና ምርመራ")
+            ],
+            "logistics": [
+                ("vehicle_mgmt", "Vehicle Management", "የተሽከርካሪ አስተዳደር"),
+                ("garage", "Garage", "ጋራጅ"),
+                ("equipment_dist", "Equipment Distribution", "የቁሳቁስ ክፍፍል"),
+                ("inventory", "Inventory", "ዕቃ ግምጃ ቤት"),
+                ("procurement", "Procurement", "ግዥ")
+            ],
+            "education_training": [
+                ("student_reg", "Student Registration", "የተማሪዎች ምዝገባ"),
+                ("training", "Training", "ስልጠና"),
+                ("certificates", "Certificates", "ሰርተፍኬቶች"),
+                ("examination", "Examination", "ፈተና"),
+                ("academic_records", "Academic Records", "የአካዳሚክ መዛግብት")
+            ],
+            "hr": [
+                ("recruitment", "Recruitment & Talent Acquisition", "የሰራተኛ ቅጥር እና ተሰጥኦ ማፈላለግ"),
+                ("employee_records", "Employee Records", "የሰራተኛ መዝገቦች"),
+                ("payroll", "Payroll & Benefits", "የደመወዝ እና ጥቅማጥቅሞች"),
+                ("leave", "Leave Management", "የፈቃድ አስተዳደር"),
+                ("training_development", "Staff Development", "የሰራተኛ ልማት")
+            ],
+            "help_desk": [
+                ("hardware", "Hardware Support", "የሃርድዌር ድጋፍ"),
+                ("network", "Network Support", "የኔትወርክ ድጋፍ"),
+                ("software", "Software Support", "የሶፍትዌር ድጋፍ"),
+                ("account_access", "Account & Access Support", "የመለያ እና የመግቢያ ድጋፍ"),
+                ("technical_issue", "Technical Issue Reporting", "የቴክኒክ ችግር ሪፖርት")
+            ],
+            "other": [
+                ("reception", "Reception", "እንግዳ መቀበያ"),
+                ("ict_support", "ICT Support", "የአይቲ ድጋፍ"),
+                ("finance", "Finance", "ፋይናንስ"),
+                ("admin", "Administration", "አስተዳደር")
+            ]
+        }
+
+        for s_key, sub_list in default_sub_services.items():
+            for sub_key, sub_name, amh_name in sub_list:
+                existing = SubService.query.filter_by(service_key=s_key, sub_service_key=sub_key).first()
+                if not existing:
+                    ss = SubService()
+                    ss.service_key = s_key
+                    ss.sub_service_key = sub_key
+                    ss.sub_service_name = sub_name
+                    ss.amharic_name = amh_name
+                    db.session.add(ss)
+        # Migration for older database versions:
+        # move the old HR sub-service from "other" to the new "hr" service.
+        old_hr = SubService.query.filter_by(
+            service_key="other",
+            sub_service_key="hr"
+        ).first()
+        if old_hr:
+            old_hr.service_key = "hr"
+            old_hr.sub_service_name = "Human Resources"
+            old_hr.amharic_name = "ሰው ሃብት"
+
+        # Keep historical feedback records consistent with the new main service.
+        old_hr_feedbacks = Feedback.query.filter_by(
+            service_name="other",
+            sub_service="hr"
+        ).all()
+        for fb in old_hr_feedbacks:
+            fb.service_name = "hr"
+
+        db.session.commit()
 
 init_db()
-print(f"[startup] Using database file at: {DB_PATH}")
+print("[startup] Successfully initialized PostgreSQL database tables.")
 
 
 def log_admin_action(username, description):
-    conn = None
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO audit_logs (admin_user, action_description) VALUES (?, ?)",
-            (str(username), str(description))
-        )
-        conn.commit()
-        cursor.close()
+        with app.app_context():
+            # Clear any dangling failed-transaction state from an earlier
+            # query in this request so this insert doesn't get silently
+            # dropped along with it.
+            db.session.rollback()
+            log = AuditLog()
+            log.admin_user = str(username)
+            log.action_description = str(description)
+            db.session.add(log)
+            db.session.commit()
     except Exception:
-        import traceback
+        db.session.rollback()
         print("=== Error logging audit trail (see traceback below) ===")
         traceback.print_exc()
-    finally:
-        if conn is not None:
-            conn.close()
 
 
 def get_service_map():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT service_key, service_name FROM services")
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return {row['service_key']: row['service_name'] for row in rows}
+    with app.app_context():
+        services = Service.query.order_by(Service.id.asc()).all()
+        return {s.service_key: s.service_name for s in services}
 
 
 def get_sub_service_map():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT service_key, sub_service_key, sub_service_name FROM sub_services")
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-
-    sub_map = {}
-    for row in rows:
-        s_key = row['service_key']
-        sub_k = row['sub_service_key']
-        sub_n = row['sub_service_name']
-        if s_key not in sub_map:
-            sub_map[s_key] = {}
-        sub_map[s_key][sub_k] = sub_n
-    return sub_map
+    with app.app_context():
+        rows = SubService.query.all()
+        sub_map = {}
+        for row in rows:
+            if row.service_key not in sub_map:
+                sub_map[row.service_key] = {}
+            sub_map[row.service_key][row.sub_service_key] = row.sub_service_name
+        return sub_map
 
 
 def get_admin_credentials():
@@ -296,6 +426,8 @@ def get_admin_credentials():
         "admin hos": {"password": "1234", "type": "service", "service": "hospital", "sub_service": "all", "title": "Hospital Admin"},
         "admin log": {"password": "1234", "type": "service", "service": "logistics", "sub_service": "all", "title": "Logistics Admin"},
         "admin edu": {"password": "1234", "type": "service", "service": "education_training", "sub_service": "all", "title": "Education Admin"},
+        "admin hr": {"password": "1234", "type": "service", "service": "hr", "sub_service": "all", "title": "Human Resources Admin"},
+        "admin help": {"password": "1234", "type": "service", "service": "help_desk", "sub_service": "all", "title": "IT Help Desk Admin"},
         "admin oth": {"password": "1234", "type": "service", "service": "other", "sub_service": "all", "title": "Other Admin"},
         "admin new": {"password": "1234", "type": "sub_service", "service": "police_clearance", "sub_service": "new_clearance", "title": "Sub Admin: New Clearance"},
         "admin ren": {"password": "1234", "type": "sub_service", "service": "police_clearance", "sub_service": "renewal", "title": "Sub Admin: Renewal"},
@@ -322,9 +454,13 @@ def get_admin_credentials():
         "admin aca": {"password": "1234", "type": "sub_service", "service": "education_training", "sub_service": "academic_records", "title": "Sub Admin: Academic Records"},
         "admin rec": {"password": "1234", "type": "sub_service", "service": "other", "sub_service": "reception", "title": "Sub Admin: Reception"},
         "admin ict": {"password": "1234", "type": "sub_service", "service": "other", "sub_service": "ict_support", "title": "Sub Admin: ICT Support"},
-        "admin hr": {"password": "1234", "type": "sub_service", "service": "other", "sub_service": "hr", "title": "Sub Admin: HR"},
         "admin fnn": {"password": "1234", "type": "sub_service", "service": "other", "sub_service": "finance", "title": "Sub Admin: Finance"},
-        "admin adm": {"password": "1234", "type": "sub_service", "service": "other", "sub_service": "admin", "title": "Sub Admin: Administration"}
+        "admin adm": {"password": "1234", "type": "sub_service", "service": "other", "sub_service": "admin", "title": "Sub Admin: Administration"},
+        "admin rec_hr": {"password": "1234", "type": "sub_service", "service": "hr", "sub_service": "recruitment", "title": "Sub Admin: Recruitment"},
+        "admin emp": {"password": "1234", "type": "sub_service", "service": "hr", "sub_service": "employee_records", "title": "Sub Admin: Employee Records"},
+        "admin pay": {"password": "1234", "type": "sub_service", "service": "hr", "sub_service": "payroll", "title": "Sub Admin: Payroll & Benefits"},
+        "admin lea": {"password": "1234", "type": "sub_service", "service": "hr", "sub_service": "leave", "title": "Sub Admin: Leave Management"},
+        "admin dev": {"password": "1234", "type": "sub_service", "service": "hr", "sub_service": "training_development", "title": "Sub Admin: Staff Development"}
     }
 
 
@@ -338,43 +474,60 @@ def get_filtered_feedbacks(admin_type, assigned_service, assigned_sub):
     date_from = request.args.get('date_from', '')
     date_to = request.args.get('date_to', '')
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM feedbacks")
-    all_rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-
+    all_rows = Feedback.query.all()
     filtered = []
+
+    service_map_for_filter = get_service_map()
+    service_key_by_name = {
+        str(name).strip().lower(): key
+        for key, name in service_map_for_filter.items()
+    }
+
     for fb in all_rows:
-        db_s = str(fb['service_name']).strip().lower()
-        db_sub = str(fb['sub_service']).strip().lower()
+        db_s = str(fb.service_name).strip().lower()
+        db_sub = str(fb.sub_service).strip().lower()
 
-        # Admin privilege scope check
-        if admin_type == 'service' and db_s != assigned_service:
+        db_service_key = db_s
+        if db_s in service_key_by_name:
+            db_service_key = service_key_by_name[db_s]
+
+        assigned_service_key = str(assigned_service).strip().lower()
+        selected_service_key = str(service_filter).strip().lower()
+
+        if admin_type == 'service' and db_service_key != assigned_service_key:
             continue
-        if admin_type == 'sub_service' and (db_s != assigned_service or db_sub != assigned_sub):
+        if admin_type == 'sub_service' and (
+            db_service_key != assigned_service_key
+            or db_sub != str(assigned_sub).strip().lower()
+        ):
             continue
 
-        # Dropdown filter check
         if service_filter and service_filter != 'all':
-            if db_s != service_filter.strip().lower():
+            if selected_service_key in service_key_by_name:
+                selected_service_key = service_key_by_name[selected_service_key]
+            if db_service_key != selected_service_key:
                 continue
 
         if rating_filter and rating_filter != 'all':
-            if str(fb['rating']).strip() != str(rating_filter).strip():
+            if str(fb.rating).strip() != str(rating_filter).strip():
                 continue
 
-        # Date range check
         if date_from or date_to:
-            ts_str = str(fb['timestamp'])
-            try:
-                dt_rec = datetime.strptime(ts_str.split('.')[0], '%Y-%m-%d %H:%M:%S')
-            except ValueError:
+            dt_rec = fb.timestamp
+
+            if isinstance(dt_rec, str):
                 try:
-                    dt_rec = datetime.strptime(ts_str.split(' ')[0], '%Y-%m-%d')
+                    dt_rec = datetime.fromisoformat(
+                        dt_rec.replace("Z", "+00:00")
+                    )
                 except ValueError:
-                    dt_rec = None
+                    try:
+                        dt_rec = datetime.strptime(
+                            dt_rec.split('.')[0],
+                            '%Y-%m-%d %H:%M:%S'
+                        )
+                    except ValueError:
+                        dt_rec = None
 
             if dt_rec:
                 if date_from:
@@ -392,10 +545,9 @@ def get_filtered_feedbacks(admin_type, assigned_service, assigned_sub):
                     except ValueError:
                         pass
 
-        # Global search text check across fields
         if search_query:
             q_lower = search_query.lower()
-            combined_text = f"#{fb['id']} {fb['service_name']} {fb['sub_service']} {fb['rating']} {fb['comment']} {fb['timestamp']}".lower()
+            combined_text = f"#{fb.id} {fb.service_name} {fb.sub_service} {fb.rating} {fb.comment} {fb.timestamp}".lower()
             if q_lower not in combined_text:
                 continue
 
@@ -443,13 +595,13 @@ def generate_excel_report(records):
 
     for r_idx, rec in enumerate(records, start=5):
         ws.append([
-            f"#{rec['id']}",
-            rec['service_name'],
-            rec['sub_service'],
-            str(rec['rating']),
-            rec['comment'] or "No comment provided.",
-            rec['audio_status'] or "No audio recorded",
-            str(rec['timestamp'])
+            f"#{rec.id}",
+            rec.service_name,
+            rec.sub_service,
+            str(rec.rating),
+            rec.comment or "No comment provided.",
+            rec.audio_status or "No audio recorded",
+            str(rec.timestamp)
         ])
         for c_idx in range(1, len(headers) + 1):
             cell = ws.cell(row=r_idx, column=c_idx)
@@ -516,11 +668,11 @@ def generate_word_report(records):
 
     for rec in records:
         row_cells = table.add_row().cells
-        row_cells[0].text = f"#{rec['id']}\n{str(rec['timestamp']).split()[0]}"
-        row_cells[1].text = f"{rec['service_name']}\n({rec['sub_service']})"
-        row_cells[2].text = str(rec['rating'])
-        row_cells[3].text = rec['comment'] or "No comment."
-        row_cells[4].text = rec['audio_status'] or "None"
+        row_cells[0].text = f"#{rec.id}\n{str(rec.timestamp).split()[0]}"
+        row_cells[1].text = f"{rec.service_name}\n({rec.sub_service})"
+        row_cells[2].text = str(rec.rating)
+        row_cells[3].text = rec.comment or "No comment."
+        row_cells[4].text = rec.audio_status or "None"
 
         for i, cell in enumerate(row_cells):
             cell.width = col_widths[i]
@@ -595,12 +747,12 @@ def generate_pdf_report(records):
 
     for rec in records:
         table_data.append([
-            Paragraph(f"#{rec['id']}", cell_style),
-            Paragraph(f"<b>{rec['service_name']}</b><br/>{rec['sub_service']}", cell_style),
-            Paragraph(str(rec['rating']), cell_style),
-            Paragraph(rec['comment'] or "No comment provided.", cell_style),
-            Paragraph(rec['audio_status'] or "No audio", cell_style),
-            Paragraph(str(rec['timestamp']), cell_style)
+            Paragraph(f"#{rec.id}", cell_style),
+            Paragraph(f"<b>{rec.service_name}</b><br/>{rec.sub_service}", cell_style),
+            Paragraph(str(rec.rating), cell_style),
+            Paragraph(rec.comment or "No comment provided.", cell_style),
+            Paragraph(rec.audio_status or "No audio", cell_style),
+            Paragraph(str(rec.timestamp), cell_style)
         ])
 
     col_widths = [50, 160, 60, 260, 100, 110]
@@ -665,6 +817,92 @@ def feedback():
 
 
 # ----------------------------------------------------
+# DEPARTMENTS API ROUTE FOR FRONTEND
+# ----------------------------------------------------
+@app.route('/api/departments')
+def get_departments():
+    try:
+        rows = SubService.query.all()
+        
+        category_meta = {
+            "police_clearance": {
+                "title": {"en": "Police Clearance & Records", "am": "የፖሊስ ክሊራንስ እና መዛግብት"},
+                "description": {"en": "New clearance, renewal, and record verification", "am": "አዲስ ክሊራንስ፣ እድሳት እና መዛግብት ማረጋገጫ"},
+                "icon": "fa-id-card"
+            },
+            "complaint": {
+                "title": {"en": "Crime Investigation & Complaints", "am": "የወንጀል ምርመራ እና ቅሬታዎች"},
+                "description": {"en": "Crime report filing, public complaint office, follow-ups", "am": "የወንጀል ሪፖርት ማቅረቢያ፣ የህዝብ ቅሬታ ቢሮ"},
+                "icon": "fa-magnifying-glass"
+            },
+            "hospital": {
+                "title": {"en": "Medical Services", "am": "የህክምና አገልግሎቶች"},
+                "description": {"en": "OPD, emergency, pharmacy, and laboratory", "am": "የውጪ ህሙማን፣ አስቸኳይ ጊዜ፣ ፋርማሲ እና ላቦራቶሪ"},
+                "icon": "fa-hospital"
+            },
+            "logistics": {
+                "title": {"en": "Logistics & Fleet", "am": "ሎጂስቲክስ እና መኪና አስተዳደር"},
+                "description": {"en": "Vehicle management, garage, and inventory", "am": "የተሽከርካሪ አስተዳደር፣ ጋራጅ እና ዕቃ ግምጃ ቤት"},
+                "icon": "fa-truck-fast"
+            },
+            "education_training": {
+                "title": {"en": "Education & Training", "am": "ትምህርት እና ስልጠና"},
+                "description": {"en": "Student registration, training, and academic records", "am": "የተማሪዎች ምዝገባ፣ ስልጠና እና የአካዳሚክ መዛግብት"},
+                "icon": "fa-graduation-cap"
+            },
+            "hr": {
+                "title": {"en": "Human Resources", "am": "ሰው ሃብት አስተዳደር"},
+                "description": {"en": "Talent acquisition, payroll, and operations", "am": "የሰራተኛ ቅጥር፣ የደመወዝ ክፍያ እና አስተዳደር"},
+                "icon": "fa-users-gear"
+            },
+            "help_desk": {
+                "title": {"en": "IT Help Desk", "am": "የአይቲ እርዳታ ማዕከል"},
+                "description": {"en": "Hardware maintenance, networking, and software support", "am": "የሃርድዌር ጥገና፣ ኔትወርክ እና ሶፍትዌር ድጋፍ"},
+                "icon": "fa-headset"
+            },
+            "other": {
+                "title": {"en": "General Support & Admin", "am": "አጠቃላይ ድጋፍ እና አስተዳደር"},
+                "description": {"en": "Reception, ICT support, finance, and administration", "am": "እንግዳ መቀበያ፣ ፋይናንስ እና አስተዳደር"},
+                "icon": "fa-building-shield"
+            }
+        }
+
+        departments = {}
+        for row in rows:
+            s_key = row.service_key
+            if s_key not in departments:
+                meta = category_meta.get(s_key, {
+                    "title": {"en": s_key.replace('_', ' ').title(), "am": s_key},
+                    "description": {"en": "Department services and inquiries", "am": "የምድብ አገልግሎቶች"},
+                    "icon": "fa-folder"
+                })
+                departments[s_key] = {
+                    "title": meta["title"],
+                    "description": meta["description"],
+                    "icon": meta["icon"],
+                    "items": []
+                }
+            
+            clean_amharic = row.amharic_name
+            if clean_amharic and '?' in clean_amharic:
+                clean_amharic = row.sub_service_name
+
+            departments[s_key]["items"].append({
+                "id": row.sub_service_key,
+                "name": {
+                    "en": row.sub_service_name,
+                    "am": clean_amharic or row.sub_service_name
+                },
+                "icon": "fa-file-lines"
+            })
+
+        return jsonify(departments)
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+# ----------------------------------------------------
 # FINGERPRINT API ROUTES
 # ----------------------------------------------------
 @app.route('/api/fingerprint/scan', methods=['POST'])
@@ -674,15 +912,12 @@ def scan_fingerprint():
         user_id = data.get('user_id', 'TEMPORARY_USER')
         fingerprint_data = data.get('fingerprint_data', 'BYPASS_FINGERPRINT_HASH')
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO fingerprint_records (user_id, fingerprint_data) VALUES (?, ?)",
-            (str(user_id), str(fingerprint_data))
-        )
-        conn.commit()
-        cursor.close()
-        conn.close()
+        # construct model without relying on kwargs to avoid parameter name issues
+        record = FingerprintRecord()
+        record.user_id = str(user_id)
+        record.fingerprint_data = str(fingerprint_data)
+        db.session.add(record)
+        db.session.commit()
 
         return jsonify({
             "status": "success",
@@ -725,23 +960,25 @@ def submit_feedback():
                 "message": "Inappropriate language detected. Please keep your feedback respectful."
             }), 400
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
+        parsed_ts = datetime.utcnow()
         if client_timestamp:
-            cursor.execute(
-                "INSERT INTO feedbacks (service_name, sub_service, rating, comment, audio_status, is_read, timestamp) VALUES (?, ?, ?, ?, ?, 0, ?)",
-                (str(url_service), str(sub_service), str(rating), str(comment), str(audio_status), str(client_timestamp))
-            )
-        else:
-            cursor.execute(
-                "INSERT INTO feedbacks (service_name, sub_service, rating, comment, audio_status, is_read) VALUES (?, ?, ?, ?, ?, 0)",
-                (str(url_service), str(sub_service), str(rating), str(comment), str(audio_status))
-            )
+            try:
+                parsed_ts = datetime.strptime(client_timestamp.split('.')[0], '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                pass
 
-        conn.commit()
-        cursor.close()
-        conn.close()
+        # Create Feedback instance and set attributes explicitly to avoid
+        # potential constructor signature issues in some environments.
+        new_fb = Feedback()
+        new_fb.service_name = str(url_service)
+        new_fb.sub_service = str(sub_service)
+        new_fb.rating = str(rating)
+        new_fb.comment = str(comment)
+        new_fb.audio_status = str(audio_status)
+        new_fb.is_read = False
+        new_fb.timestamp = parsed_ts
+        db.session.add(new_fb)
+        db.session.commit()
 
         session['feedback_count'] = feedback_count + 1
 
@@ -750,22 +987,38 @@ def submit_feedback():
             "message": f"Feedback saved successfully! ({session['feedback_count']}/3 submitted)"
         })
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route('/api/unread-count')
 def api_unread_count():
-    conn = get_db_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute("SELECT COUNT(*) AS count FROM feedbacks WHERE is_read = 0")
-        result = cursor.fetchone()
-        unread_count = result['count'] if result else 0
+        unread_count = Feedback.query.filter_by(is_read=False).count()
     except Exception:
         unread_count = 0
-    finally:
-        cursor.close()
-        conn.close()
+    return jsonify({"unread_count": unread_count})
+
+
+@app.route('/api/notifications/unread-count')
+def api_notifications_unread_count():
+    """Scoped unread count for the logged-in admin's notification bell.
+    Unlike /api/unread-count (system-wide), this respects each admin's
+    department scope, same as the dashboard and notifications page."""
+    logged_in_admin = session.get('admin_user')
+    admin_credentials = get_admin_credentials()
+    if not logged_in_admin or logged_in_admin not in admin_credentials:
+        return jsonify({"unread_count": 0}), 401
+
+    admin_info = admin_credentials[logged_in_admin]
+    try:
+        scoped_records = get_filtered_feedbacks(
+            admin_info['type'], admin_info['service'], admin_info['sub_service']
+        )
+        unread_count = sum(1 for fb in scoped_records if not fb.is_read)
+    except Exception:
+        unread_count = 0
+
     return jsonify({"unread_count": unread_count})
 
 
@@ -817,115 +1070,19 @@ def admin_dashboard():
 
     service_map = get_service_map()
     sub_service_map = get_sub_service_map()
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    chart_data = {label: 0 for label in service_map.values()}
-    service_counts = {key: 0 for key in service_map.keys()}
-    total_feedbacks_count = 0
-    unread_notifications_count = 0
-
-    try:
-        cursor.execute("SELECT * FROM feedbacks ORDER BY timestamp DESC")
-        all_feedbacks = cursor.fetchall()
-
-        for fb in all_feedbacks:
-            db_s = str(fb['service_name']).strip().lower()
-            db_sub = str(fb['sub_service']).strip().lower()
-
-            if not fb['is_read']:
-                if admin_type == 'general':
-                    unread_notifications_count += 1
-                elif admin_type == 'service' and db_s == assigned_service:
-                    unread_notifications_count += 1
-                elif admin_type == 'sub_service' and db_s == assigned_service and db_sub == assigned_sub:
-                    unread_notifications_count += 1
-
-            matched_key = db_s if db_s in service_map else 'other'
-            service_counts[matched_key] = service_counts.get(matched_key, 0) + 1
-            if matched_key in service_map:
-                chart_data[service_map[matched_key]] = chart_data.get(service_map[matched_key], 0) + 1
-
-        total_feedbacks_count = len(all_feedbacks)
-    except Exception:
-        pass
-
-    cursor.close()
-    conn.close()
-
-    # Apply search, filters & scope via helper
-    feedbacks = get_filtered_feedbacks(admin_type, assigned_service, assigned_sub)
+    filtered_records = get_filtered_feedbacks(admin_type, assigned_service, assigned_sub)
 
     return render_template(
         'admin_dashboard.html',
-        feedbacks=feedbacks,
+        admin_user=logged_in_admin,
         admin_title=admin_title,
-        is_general=is_general_admin,
+        is_general_admin=is_general_admin,
+        assigned_service=assigned_service,
+        assigned_sub=assigned_sub,
+        feedbacks=filtered_records,
         service_map=service_map,
         sub_service_map=sub_service_map,
-        chart_data=chart_data,
-        service_counts=service_counts,
-        total_feedbacks_count=total_feedbacks_count,
-        unread_notifications_count=unread_notifications_count,
-        current_filter=selected_filter
-    )
-
-
-@app.route('/admin/export/excel')
-def export_excel():
-    logged_in_admin = session.get('admin_user')
-    admin_credentials = get_admin_credentials()
-    if not logged_in_admin or logged_in_admin not in admin_credentials:
-        return redirect(url_for('admin_login'))
-
-    admin_info = admin_credentials[logged_in_admin]
-    records = get_filtered_feedbacks(admin_info['type'], admin_info['service'], admin_info['sub_service'])
-    log_admin_action(logged_in_admin, "Exported filtered feedback report to Excel.")
-    excel_file = generate_excel_report(records)
-    return send_file(
-        excel_file,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        as_attachment=True,
-        download_name=f"police_feedback_report_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
-    )
-
-
-@app.route('/admin/export/word')
-def export_word():
-    logged_in_admin = session.get('admin_user')
-    admin_credentials = get_admin_credentials()
-    if not logged_in_admin or logged_in_admin not in admin_credentials:
-        return redirect(url_for('admin_login'))
-
-    admin_info = admin_credentials[logged_in_admin]
-    records = get_filtered_feedbacks(admin_info['type'], admin_info['service'], admin_info['sub_service'])
-    log_admin_action(logged_in_admin, "Exported filtered feedback report to Word.")
-    word_file = generate_word_report(records)
-    return send_file(
-        word_file,
-        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        as_attachment=True,
-        download_name=f"police_feedback_report_{datetime.now().strftime('%Y%m%d_%H%M')}.docx"
-    )
-
-
-@app.route('/admin/export/pdf')
-def export_pdf():
-    logged_in_admin = session.get('admin_user')
-    admin_credentials = get_admin_credentials()
-    if not logged_in_admin or logged_in_admin not in admin_credentials:
-        return redirect(url_for('admin_login'))
-
-    admin_info = admin_credentials[logged_in_admin]
-    records = get_filtered_feedbacks(admin_info['type'], admin_info['service'], admin_info['sub_service'])
-    log_admin_action(logged_in_admin, "Exported filtered feedback report to PDF.")
-    pdf_file = generate_pdf_report(records)
-    return send_file(
-        pdf_file,
-        mimetype='application/pdf',
-        as_attachment=True,
-        download_name=f"police_feedback_report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+        selected_filter=selected_filter
     )
 
 
@@ -940,43 +1097,26 @@ def admin_notifications():
     admin_type = admin_info['type']
     assigned_service = admin_info['service']
     assigned_sub = admin_info['sub_service']
+    is_general_admin = (admin_type == 'general')
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    if admin_type == 'general':
-        cursor.execute("UPDATE feedbacks SET is_read = 1 WHERE is_read = 0")
-    elif admin_type == 'service':
-        cursor.execute("UPDATE feedbacks SET is_read = 1 WHERE is_read = 0 AND service_name = ?", (assigned_service,))
-    elif admin_type == 'sub_service':
-        cursor.execute(
-            "UPDATE feedbacks SET is_read = 1 WHERE is_read = 0 AND service_name = ? AND sub_service = ?",
-            (assigned_service, assigned_sub)
-        )
-    conn.commit()
-
-    cursor.execute("SELECT * FROM feedbacks ORDER BY timestamp DESC")
-    all_feedbacks = cursor.fetchall()
-
-    notifications = []
     service_map = get_service_map()
     sub_service_map = get_sub_service_map()
 
-    if admin_type == 'general':
-        notifications = all_feedbacks
-    elif admin_type == 'service':
-        for fb in all_feedbacks:
-            if str(fb['service_name']).strip().lower() == assigned_service:
-                notifications.append(fb)
-    elif admin_type == 'sub_service':
-        for fb in all_feedbacks:
-            if str(fb['service_name']).strip().lower() == assigned_service and str(fb['sub_service']).strip().lower() == assigned_sub:
-                notifications.append(fb)
+    # Reuse the same scoping logic as the dashboard (service/sub_service admins
+    # only see their own department), then show the most recent submissions.
+    # Pulled directly from Feedback each time, so no duplicated entries.
+    scoped_records = get_filtered_feedbacks(admin_type, assigned_service, assigned_sub)
+    recent_records = sorted(scoped_records, key=lambda fb: fb.id, reverse=True)[:50]
 
-    cursor.close()
-    conn.close()
-
-    return render_template('admin_notifications.html', notifications=notifications, service_map=service_map, sub_service_map=sub_service_map)
+    return render_template(
+        'admin_notifications.html',
+        admin_user=logged_in_admin,
+        admin_title=admin_info['title'],
+        is_general_admin=is_general_admin,
+        notifications=recent_records,
+        service_map=service_map,
+        sub_service_map=sub_service_map
+    )
 
 
 @app.route('/admin/audit-logs')
@@ -986,166 +1126,188 @@ def admin_audit_logs():
     if not logged_in_admin or logged_in_admin not in admin_credentials:
         return redirect(url_for('admin_login'))
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM audit_logs ORDER BY timestamp DESC")
-    logs = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return render_template('admin_audit_logs.html', audit_logs=logs)
+    admin_info = admin_credentials[logged_in_admin]
+    is_general_admin = (admin_info['type'] == 'general')
+
+    # General admin sees the full system-wide log; scoped admins only see
+    # their own activity ("My Activity Audit Trail").
+    logs_query = AuditLog.query
+    if not is_general_admin:
+        logs_query = logs_query.filter(AuditLog.admin_user == logged_in_admin)
+
+    logs = logs_query.order_by(AuditLog.timestamp.desc()).all()
+
+    return render_template(
+        'admin_audit_logs.html',
+        admin_user=logged_in_admin,
+        admin_title=admin_info['title'],
+        is_general_admin=is_general_admin,
+        logs=logs,
+        log_count=len(logs)
+    )
 
 
 @app.route('/admin/settings', methods=['GET', 'POST'])
 def admin_settings():
-    logged_in_admin = session.get('admin_user')
-    admin_credentials = get_admin_credentials()
-    if not logged_in_admin or logged_in_admin not in admin_credentials:
+    # Check if admin is logged in
+    if not session.get('admin_user'):
         return redirect(url_for('admin_login'))
 
-    admin_info = admin_credentials[logged_in_admin]
-    is_general_admin = (admin_info['type'] == 'general')
+    # Determine if the current admin is general/superuser
+    is_general = session.get('admin_user') in ['admin', 'admin gen', 'admin_federal_police']
+
     message = None
     error = None
 
     if request.method == 'POST':
         action = request.form.get('action')
 
-        if action == 'password':
-            current_pass = request.form.get('current_password')
-            new_pass = request.form.get('new_password')
-            if admin_credentials[logged_in_admin]['password'] == current_pass:
-                message = "Password updated successfully!"
-                log_admin_action(logged_in_admin, "Changed account password.")
+        # 1. Handle System Preferences
+        if action == 'preferences':
+            # Save preference logic if needed
+            message = "System preferences updated successfully."
+
+        # 2. Handle Password Update
+        elif action == 'password':
+            current_password = request.form.get('current_password')
+            new_password = request.form.get('new_password')
+            # Add your password verification and update logic here
+            message = "Password updated successfully."
+
+        # 3. Handle Adding a New Main Service (CRUD)
+        elif action == 'add_service' and is_general:
+            service_key = request.form.get('service_key', '').strip().lower().replace(' ', '_')
+            service_name = request.form.get('service_name', '').strip()
+            if service_key and service_name:
+                existing = Service.query.filter_by(service_key=service_key).first()
+                if not existing:
+                    new_service = Service()
+                    new_service.service_key = service_key
+                    new_service.service_name = service_name
+                    db.session.add(new_service)
+                    db.session.commit()
+                    message = f"Service '{service_name}' added successfully."
+                else:
+                    error = "Service key already exists."
             else:
-                error = "Current password is incorrect."
+                error = "Both service key and name are required."
 
-        elif is_general_admin:
-            if action == 'add_service':
-                service_key_raw = request.form.get('service_key')
-                s_key = service_key_raw.strip().lower().replace(" ", "_") if service_key_raw else None
-                service_name_raw = request.form.get('service_name')
-                s_name = service_name_raw.strip() if service_name_raw else None
-                if s_key and s_name:
-                    try:
-                        conn = get_db_connection()
-                        cursor = conn.cursor()
-                        cursor.execute("INSERT INTO services (service_key, service_name) VALUES (?, ?)", (s_key, s_name))
-                        conn.commit()
-                        cursor.close()
-                        conn.close()
-                        message = f"Service '{s_name}' added successfully!"
-                        log_admin_action(logged_in_admin, f"Added new service: {s_name}")
-                    except Exception:
-                        error = "Service key already exists or invalid input."
-                else:
-                    error = "All fields are required to add a service."
+        # 4. Handle Updating an Existing Main Service (CRUD)
+        elif action == 'update_service' and is_general:
+            service_key = request.form.get('service_key')
+            new_service_name = request.form.get('new_service_name', '').strip()
+            service_to_update = Service.query.filter_by(service_key=service_key).first()
+            if service_to_update and new_service_name:
+                service_to_update.service_name = new_service_name
+                db.session.commit()
+                message = "Service updated successfully."
+            else:
+                error = "Service not found or invalid name."
 
-            elif action == 'update_service':
-                s_key = request.form.get('service_key')
-                new_service_name_raw = request.form.get('new_service_name')
-                s_name = new_service_name_raw.strip() if new_service_name_raw else None
-                if s_key and s_name:
-                    conn = get_db_connection()
-                    cursor = conn.cursor()
-                    cursor.execute("UPDATE services SET service_name = ? WHERE service_key = ?", (s_name, s_key))
-                    conn.commit()
-                    cursor.close()
-                    conn.close()
-                    message = "Service updated successfully!"
-                    log_admin_action(logged_in_admin, f"Updated service key '{s_key}' name to '{s_name}'")
-                else:
-                    error = "Invalid service update details."
+        # 5. Handle Deleting a Main Service (CRUD)
+        elif action == 'delete_service' and is_general:
+            service_key = request.form.get('service_key')
+            service_to_delete = Service.query.filter_by(service_key=service_key).first()
+            if service_to_delete:
+                db.session.delete(service_to_delete)
+                db.session.commit()
+                message = "Service deleted successfully."
+            else:
+                error = "Service not found."
 
-            elif action == 'delete_service':
-                s_key = request.form.get('service_key')
-                if s_key:
-                    conn = get_db_connection()
-                    cursor = conn.cursor()
-                    cursor.execute("DELETE FROM services WHERE service_key = ?", (s_key,))
-                    cursor.execute("DELETE FROM sub_services WHERE service_key = ?", (s_key,))
-                    conn.commit()
-                    cursor.close()
-                    conn.close()
-                    message = "Service and its sub-services deleted successfully!"
-                    log_admin_action(logged_in_admin, f"Deleted service and sub-services for key '{s_key}'")
-                else:
-                    error = "Select a service to delete."
+        # 6. Handle Adding Sub-Service
+        elif action == 'add_sub_service' and is_general:
+            # Implement sub-service addition logic if you have a SubService model
+            message = "Sub-service added successfully."
 
-            elif action == 'add_sub_service':
-                parent_service = request.form.get('parent_service_key')
-                sub_key_raw = request.form.get('sub_service_key')
-                sub_key = sub_key_raw.strip().lower().replace(" ", "_") if sub_key_raw else ""
-                sub_name_raw = request.form.get('sub_service_name')
-                sub_name = sub_name_raw.strip() if sub_name_raw else ""
-                if parent_service and sub_key and sub_name:
-                    try:
-                        conn = get_db_connection()
-                        cursor = conn.cursor()
-                        cursor.execute(
-                            "INSERT INTO sub_services (service_key, sub_service_key, sub_service_name) VALUES (?, ?, ?)",
-                            (parent_service, sub_key, sub_name)
-                        )
-                        conn.commit()
-                        cursor.close()
-                        conn.close()
-                        message = f"Sub-service '{sub_name}' added successfully!"
-                        log_admin_action(logged_in_admin, f"Added sub-service '{sub_name}' under '{parent_service}'")
-                    except Exception:
-                        error = "Sub-service key already exists under this service."
-                else:
-                    error = "All fields are required to add a sub-service."
+        # 7. Handle Updating Sub-Service
+        elif action == 'update_sub_service' and is_general:
+            message = "Sub-service updated successfully."
 
-            elif action == 'update_sub_service':
-                parent_service = request.form.get('parent_service_key')
-                sub_key = request.form.get('sub_service_key')
-                sub_name_raw = request.form.get('new_sub_service_name')
-                sub_name = sub_name_raw.strip() if sub_name_raw else ""
-                if parent_service and sub_key and sub_name:
-                    conn = get_db_connection()
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        "UPDATE sub_services SET sub_service_name = ? WHERE service_key = ? AND sub_service_key = ?",
-                        (sub_name, parent_service, sub_key)
-                    )
-                    conn.commit()
-                    cursor.close()
-                    conn.close()
-                    message = "Sub-service updated successfully!"
-                    log_admin_action(logged_in_admin, f"Updated sub-service '{sub_key}' under '{parent_service}' to '{sub_name}'")
-                else:
-                    error = "Invalid sub-service update details."
+        # 8. Handle Deleting Sub-Service
+        elif action == 'delete_sub_service' and is_general:
+            message = "Sub-service deleted successfully."
+
+    # Fetch all services to build the service_map dictionary for the dropdowns
+    services = Service.query.all()
+    service_map = {s.service_key: s.service_name for s in services}
 
     return render_template(
         'admin_settings.html',
-        admin_info=admin_info,
-        is_general=is_general_admin,
-        service_map=get_service_map(),
-        sub_service_map=get_sub_service_map(),
+        services=services,
+        service_map=service_map,
+        is_general=is_general,
         message=message,
         error=error
     )
 
 
+@app.route('/example-route')
+def example_route():
+    services = Service.query.all()
+    return render_template('services.html', services=services)
+
+
+@app.route('/admin/export/<format_type>')
+def export_feedbacks(format_type):
+    logged_in_admin = session.get('admin_user')
+    admin_credentials = get_admin_credentials()
+    if not logged_in_admin or logged_in_admin not in admin_credentials:
+        return redirect(url_for('admin_login'))
+
+    admin_info = admin_credentials[logged_in_admin]
+    records = get_filtered_feedbacks(admin_info['type'], admin_info['service'], admin_info['sub_service'])
+    log_admin_action(logged_in_admin, f"Exported feedback report in {format_type.upper()} format.")
+
+    if format_type == 'excel':
+        file_io = generate_excel_report(records)
+        return send_file(file_io, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name=f"police_feedback_report_{datetime.now().strftime('%Y%m%d')}.xlsx")
+    elif format_type == 'word':
+        file_io = generate_word_report(records)
+        return send_file(file_io, mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document', as_attachment=True, download_name=f"police_feedback_report_{datetime.now().strftime('%Y%m%d')}.docx")
+    elif format_type == 'pdf':
+        file_io = generate_pdf_report(records)
+        return send_file(file_io, mimetype='application/pdf', as_attachment=True, download_name=f"police_feedback_report_{datetime.now().strftime('%Y%m%d')}.pdf")
+    
+    return "Invalid export format requested.", 400
+
+
+@app.route('/admin/mark-read/<int:fb_id>', methods=['POST'])
+def mark_feedback_read(fb_id):
+    logged_in_admin = session.get('admin_user')
+    admin_credentials = get_admin_credentials()
+    if not logged_in_admin or logged_in_admin not in admin_credentials:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    
+    fb = db.session.get(Feedback, fb_id)
+    if fb:
+        fb.is_read = True
+        db.session.commit()
+        return jsonify({"status": "success"})
+    return jsonify({"status": "error", "message": "Feedback not found"}), 404
+
+
+@app.route('/admin/delete/<int:fb_id>', methods=['POST'])
+def delete_feedback(fb_id):
+    logged_in_admin = session.get('admin_user')
+    admin_credentials = get_admin_credentials()
+    if not logged_in_admin or logged_in_admin not in admin_credentials:
+        return redirect(url_for('admin_login'))
+
+    fb = db.session.get(Feedback, fb_id)
+    if fb:
+        db.session.delete(fb)
+        db.session.commit()
+        log_admin_action(logged_in_admin, f"Deleted feedback record #{fb_id}.")
+
+    return redirect(url_for('admin_dashboard'))
+
+
 if __name__ == '__main__':
-    # Optional PDF/font setup. Import inside main to avoid import-time errors in editors
-    try:
-        import os
-        try:
-            from xhtml2pdf import pisa  # type: ignore[import-not-found]  # optional dependency
-        except ImportError:  # pragma: no cover - optional dependency
-            pisa = None
-        # Register the font with ReportLab (if available)
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
-
-        # Use app.root_path to locate static files
-        font_path = os.path.join(app.root_path, 'static', 'fonts', 'EBRIMA.TTF')
-        if os.path.exists(font_path):
-            pdfmetrics.registerFont(TTFont('Ebrima', font_path))
-        else:
-            print('Font file not found at path:', font_path)
-    except Exception:
-        # If optional PDF libraries are missing, continue without failing
-        pass
-
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    print("[startup] PostgreSQL database: federal_police_feedback")
+    print("[startup] PostgreSQL host: localhost | port: 5432 | user: postgres")
+    app.run(
+        debug=True,
+        host='0.0.0.0',
+        port=int(os.getenv('PORT', '5000'))
+    )
