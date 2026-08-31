@@ -98,8 +98,8 @@
         .date-text { color: #9ca3af; font-size: 13px; }
         .no-data { text-align: center; padding: 50px; color: #9ca3af; }
 
-        .export-btn { background: #1a2234; border: 1px solid rgba(255,255,255,0.1); color: #f3f4f6; padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
-        .export-btn:hover { background: #222d44; border-color: rgba(56,189,248,0.4); }
+        .export-btn, .print-btn { background: #1a2234; border: 1px solid rgba(255,255,255,0.1); color: #f3f4f6; padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+        .export-btn:hover, .print-btn:hover { background: #222d44; border-color: rgba(56,189,248,0.4); }
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 2000; justify-content: center; align-items: center; }
         .modal-overlay.active { display: flex; }
@@ -116,18 +116,46 @@
         .modal-close:hover { background: #374151; color: white; }
 
         @media print {
-            button, nav, header {
+            body, html {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+            }
+            header, nav, .search-form, .filter-container, .dashboard-grid, .ai-insights-container, .print-btn, .export-btn, .dashboard-header {
                 display: none !important;
             }
-            body {
-                background-color: white !important;
+            .container {
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .table-section {
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+            }
+            th, td {
+                border: 1px solid #d1d5db !important;
+                color: #000000 !important;
+                padding: 10px !important;
+            }
+            th {
+                background-color: #f3f4f6 !important;
+                color: #000000 !important;
+            }
+            audio, .text-muted {
+                display: none !important;
             }
         }
     </style>
 </head>
 <body>
 
-    <!-- Header Component -->
     <header>
         <a href="{{ url_for('admin_dashboard') }}" class="logo-area">
             <img src="{{ url_for('static', filename='images/police_logo.png') }}" alt="Logo">
@@ -150,11 +178,9 @@
         </div>
     </header>
 
-    <!-- Main Container -->
     <div class="container">
         <div class="dashboard-container">
             
-            <!-- Dashboard Header Info -->
             <div class="dashboard-header">
                 <div>
                     <h2>{{ admin_title | default('General Admin Dashboard') }}</h2>
@@ -167,7 +193,6 @@
                 </div>
             </div>
 
-            <!-- Search Form Component -->
             <form method="GET" action="{{ url_for('admin_dashboard') }}" class="search-form">
                 <input 
                     type="text" 
@@ -179,7 +204,6 @@
                 <button type="submit" class="search-btn">Search</button>
             </form>
 
-            <!-- General Overview Section (Charts & Folders) -->
             {% if is_general %}
             <div class="dashboard-grid">
                 <div class="card">
@@ -220,7 +244,6 @@
             </div>
             {% endif %}
 
-            <!-- AI Insights Summary Card -->
             <div class="ai-insights-container" style="background: #111827; border: 1px solid #374151; border-radius: 12px; padding: 20px; color: #ffffff; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
                 <div style="display: flex; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #374151; padding-bottom: 10px;">
                     <span style="font-size: 20px; margin-right: 8px;">✨</span>
@@ -250,7 +273,6 @@
                 </div>
             </div>
 
-            <!-- Advanced Filters Panel -->
             <form method="GET" action="{{ url_for('admin_dashboard') }}" class="filter-container">
                 <div class="filter-group">
                     <label for="service_filter">SERVICE</label>
@@ -291,12 +313,14 @@
                 </button>
             </form>
 
-            <!-- Database Records Table Section -->
             <div class="table-section">
                 <div class="table-section-header">
                     <h3>📋 Database Records {% if current_filter is defined and current_filter != 'all' %}(Folder: {{ service_map.get(current_filter, current_filter) if service_map is defined else current_filter }}){% endif %}</h3>
                     
                     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <button onclick="window.print()" class="print-btn">
+                            <i class="fas fa-print"></i> Print / Save PDF
+                        </button>
                         <a href="/admin/export/word{{ request.full_path | replace('/admin/dashboard', '') }}" class="export-btn" onclick="handleExportClick('word')">
                             📝 Export Word
                         </a>
@@ -379,7 +403,6 @@
         </div>
     </div>
 
-    <!-- Share Options Modal -->
     <div class="modal-overlay" id="shareModal">
         <div class="modal-card">
             <h3>📥 Report Generated Successfully!</h3>
@@ -401,7 +424,6 @@
         </div>
     </div>
 
-    <!-- Chart Script -->
     {% if is_general and chart_data is defined %}
     <script>
         const ctx = document.getElementById('feedbackChart').getContext('2d');
