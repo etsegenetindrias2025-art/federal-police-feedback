@@ -604,8 +604,6 @@ def build_ai_insights(records):
     for fb in records:
         key = str(fb.service_name).strip().lower()
         service_totals[key] = service_totals.get(key, 0) + 1
-    top_service_key = max(service_totals, key=service_totals.get) if service_totals else None
-    top_service = service_map.get(top_service_key, top_service_key or 'N/A')
 
     stopwords = {
         'the', 'a', 'an', 'is', 'was', 'and', 'to', 'of', 'it', 'in', 'on',
@@ -618,18 +616,13 @@ def build_ai_insights(records):
             for word in re.findall(r"[^\W\d_]+", fb.comment.lower(), flags=re.UNICODE):
                 if word not in stopwords and len(word) > 2:
                     word_counts[word] = word_counts.get(word, 0) + 1
-    main_complaint = max(word_counts, key=word_counts.get) if word_counts else 'None'
 
-    recommendation_target = top_service.lower() if top_service != 'N/A' else 'all services'
     recommendation = (
         f"Based on {len(records)} visible feedback records, continue monitoring "
-        f"service quality and response times for {recommendation_target}."
     )
 
     return {
         'satisfaction': f"{satisfaction_pct}%",
-        'top_service': top_service,
-        'main_complaint': main_complaint,
         'recommendation': recommendation
     }
 
