@@ -2,12 +2,13 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 import io
 import os
 import re
-import qrcode
-from gtts import gTTS
 import socket
 import time
+import traceback
 from datetime import datetime
-from sqlalchemy import or_, and_
+
+from sqlalchemy import or_, and_, inspect, text as sql_text
+from flask_sqlalchemy import SQLAlchemy
 
 # Excel styling imports
 import openpyxl
@@ -28,8 +29,8 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
-from flask_sqlalchemy import SQLAlchemy
-import traceback
+import psycopg2
+import psycopg2.extras
 
 try:
     from better_profanity import profanity  # type: ignore[import-not-found]
@@ -50,7 +51,6 @@ except ImportError:
         def contains_profanity(self, text):
             if not text:
                 return False
-
             normalized = re.sub(r'[^\w\s]', '', str(text).lower())
             for word in self._censored_words:
                 if re.search(rf'\b{re.escape(word)}\b', normalized):
@@ -59,20 +59,13 @@ except ImportError:
 
     profanity = _FallbackProfanity()
 
+
 # ----------------------------------------------------
 # SINGLE FLASK APP + DATABASE INITIALIZATION
 # ----------------------------------------------------
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'federal_police_secret_key')
 
-# Local defaults supplied for this project:
-#   Database: federal_police_feedback
-#   User:     postgres
-#   Password: 2323
-#   Host:     localhost
-#   Port:     5432
-#
-# For deployment, set DATABASE_URL in the environment.
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://postgres:2323@localhost:5432/federal_police_feedback"
@@ -89,6 +82,23 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 
 db = SQLAlchemy(app)
 
+
+def get_db_connection():
+    """Raw psycopg2 connection, kept available for any ad-hoc queries.
+    Everything in this file that talks to feedback data now goes through
+    the SQLAlchemy models instead, since mixing raw cursors with the ORM
+    was the source of the Pylance/runtime bugs in /admin/notifications."""
+    conn = psycopg2.connect(
+        dbname="federal_police_feedback",
+        user="postgres",
+        password="2323",
+        host="localhost",
+        port="5432",
+        cursor_factory=psycopg2.extras.RealDictCursor
+    )
+    return conn
+
+
 # ----------------------------------------------------
 # COMPREHENSIVE PROFANITY FILTER (አማርኛ + Manglish + English)
 # ----------------------------------------------------
@@ -100,6 +110,7 @@ ETHIOPIC_BAD_WORDS = [
 ]
 
 profanity.add_censor_words(ETHIOPIC_BAD_WORDS)
+
 
 def is_inappropriate(text):
     if not text:
@@ -130,6 +141,7 @@ class Feedback(db.Model):
     is_read = db.Column(db.Boolean, default=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
+
 class FingerprintRecord(db.Model):
     __tablename__ = 'fingerprint_records'
     id = db.Column(db.Integer, primary_key=True)
@@ -138,11 +150,13 @@ class FingerprintRecord(db.Model):
     status = db.Column(db.String(50), default='Verified')
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
+
 class Service(db.Model):
     __tablename__ = 'services'
     id = db.Column(db.Integer, primary_key=True)
     service_key = db.Column(db.String(50), unique=True, nullable=False)
     service_name = db.Column(db.String(100), nullable=False)
+
 
 class SubService(db.Model):
     __tablename__ = 'sub_services'
@@ -152,12 +166,14 @@ class SubService(db.Model):
     sub_service_name = db.Column(db.String(100), nullable=False)
     amharic_name = db.Column(db.String(100), nullable=True)
 
+
 class AuditLog(db.Model):
     __tablename__ = 'audit_logs'
     id = db.Column(db.Integer, primary_key=True)
     admin_user = db.Column(db.String(100), nullable=False)
     action_description = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
 
 class Notification(db.Model):
     __tablename__ = 'notifications'
@@ -168,8 +184,6 @@ class Notification(db.Model):
 
 def ensure_postgresql_schema():
     """Migrate the old sub_services schema if it already exists."""
-    from sqlalchemy import inspect, text as sql_text
-
     inspector = inspect(db.engine)
     tables = set(inspector.get_table_names())
 
@@ -267,11 +281,12 @@ def ensure_postgresql_schema():
 
         db.session.commit()
 
+
 def init_db():
     with app.app_context():
         ensure_postgresql_schema()
         db.create_all()
-        
+
         default_services = [
             ("police_clearance", "Police Clearance"),
             ("complaint", "Complaint"),
@@ -289,7 +304,7 @@ def init_db():
                 svc.service_key = key
                 svc.service_name = name
                 db.session.add(svc)
-        
+
         default_sub_services = {
             "police_clearance": [
                 ("new_clearance", "New Police Clearance", "አዲስ የፖሊስ ክሊራንስ"),
@@ -358,6 +373,7 @@ def init_db():
                     ss.sub_service_name = sub_name
                     ss.amharic_name = amh_name
                     db.session.add(ss)
+
         # Migration for older database versions:
         # move the old HR sub-service from "other" to the new "hr" service.
         old_hr = SubService.query.filter_by(
@@ -378,6 +394,7 @@ def init_db():
             fb.service_name = "hr"
 
         db.session.commit()
+
 
 init_db()
 print("[startup] Successfully initialized PostgreSQL database tables.")
@@ -467,9 +484,22 @@ def get_admin_credentials():
 # ----------------------------------------------------
 # ADVANCED SEARCH, FILTER & REPORT BUILDERS
 # ----------------------------------------------------
+def _resolve_service_key(fb, service_key_by_name):
+    """Best-effort normalization of a feedback row's stored service_name
+    into one of the canonical service_key values from the services table."""
+    db_s = str(fb.service_name).strip().lower()
+    return service_key_by_name.get(db_s, db_s)
+
+
 def get_filtered_feedbacks(admin_type, assigned_service, assigned_sub):
-    search_query = request.args.get('q', '').strip()
+    """Returns Feedback rows scoped to this admin, then narrowed by
+    whichever of the search/filter query params are present. Both the
+    'folder' click (?service=...) and the advanced filter dropdown
+    (?service_filter=...) are honored; the free-text box is accepted as
+    either 'search' (current template) or 'q' (legacy links)."""
+    search_query = (request.args.get('search') or request.args.get('q') or '').strip()
     service_filter = request.args.get('service_filter', 'all')
+    folder_filter = request.args.get('service', 'all')
     rating_filter = request.args.get('rating', 'all')
     date_from = request.args.get('date_from', '')
     date_to = request.args.get('date_to', '')
@@ -483,16 +513,11 @@ def get_filtered_feedbacks(admin_type, assigned_service, assigned_sub):
         for key, name in service_map_for_filter.items()
     }
 
+    assigned_service_key = str(assigned_service).strip().lower()
+
     for fb in all_rows:
-        db_s = str(fb.service_name).strip().lower()
+        db_service_key = _resolve_service_key(fb, service_key_by_name)
         db_sub = str(fb.sub_service).strip().lower()
-
-        db_service_key = db_s
-        if db_s in service_key_by_name:
-            db_service_key = service_key_by_name[db_s]
-
-        assigned_service_key = str(assigned_service).strip().lower()
-        selected_service_key = str(service_filter).strip().lower()
 
         if admin_type == 'service' and db_service_key != assigned_service_key:
             continue
@@ -502,7 +527,11 @@ def get_filtered_feedbacks(admin_type, assigned_service, assigned_sub):
         ):
             continue
 
-        if service_filter and service_filter != 'all':
+        # Advanced-filter dropdown takes priority; otherwise fall back to
+        # the folder that was clicked on the general dashboard.
+        active_service_selection = service_filter if service_filter and service_filter != 'all' else folder_filter
+        if active_service_selection and active_service_selection != 'all':
+            selected_service_key = str(active_service_selection).strip().lower()
             if selected_service_key in service_key_by_name:
                 selected_service_key = service_key_by_name[selected_service_key]
             if db_service_key != selected_service_key:
@@ -517,15 +546,10 @@ def get_filtered_feedbacks(admin_type, assigned_service, assigned_sub):
 
             if isinstance(dt_rec, str):
                 try:
-                    dt_rec = datetime.fromisoformat(
-                        dt_rec.replace("Z", "+00:00")
-                    )
+                    dt_rec = datetime.fromisoformat(dt_rec.replace("Z", "+00:00"))
                 except ValueError:
                     try:
-                        dt_rec = datetime.strptime(
-                            dt_rec.split('.')[0],
-                            '%Y-%m-%d %H:%M:%S'
-                        )
+                        dt_rec = datetime.strptime(dt_rec.split('.')[0], '%Y-%m-%d %H:%M:%S')
                     except ValueError:
                         dt_rec = None
 
@@ -553,7 +577,61 @@ def get_filtered_feedbacks(admin_type, assigned_service, assigned_sub):
 
         filtered.append(fb)
 
+    filtered.sort(key=lambda fb: fb.timestamp, reverse=True)
     return filtered
+
+
+def build_ai_insights(records):
+    """Lightweight, dependency-free heuristics for the dashboard's
+    'AI Summary & Insights' card, computed straight from the scoped
+    Postgres records (no external API calls)."""
+    if not records:
+        return {
+            'satisfaction': 'N/A',
+            'top_service': 'N/A',
+            'main_complaint': 'None',
+            'recommendation': 'No feedback records available yet for this scope.'
+        }
+
+    positive_ratings = {'😍', '😊', '4', '5'}
+    negative_ratings = {'🙁', '😠', '😡', '1', '2'}
+
+    positive_count = sum(1 for fb in records if str(fb.rating).strip() in positive_ratings)
+    satisfaction_pct = round((positive_count / len(records)) * 100)
+
+    service_map = get_service_map()
+    service_totals = {}
+    for fb in records:
+        key = str(fb.service_name).strip().lower()
+        service_totals[key] = service_totals.get(key, 0) + 1
+    top_service_key = max(service_totals, key=service_totals.get) if service_totals else None
+    top_service = service_map.get(top_service_key, top_service_key or 'N/A')
+
+    stopwords = {
+        'the', 'a', 'an', 'is', 'was', 'and', 'to', 'of', 'it', 'in', 'on',
+        'for', 'with', 'this', 'that', 'i', 'my', 'we', 'our', 'not', 'very',
+        'so', 'but', 'no', 'are', 'be', 'have', 'has', 'me', 'you', 'your'
+    }
+    word_counts = {}
+    for fb in records:
+        if str(fb.rating).strip() in negative_ratings and fb.comment:
+            for word in re.findall(r"[^\W\d_]+", fb.comment.lower(), flags=re.UNICODE):
+                if word not in stopwords and len(word) > 2:
+                    word_counts[word] = word_counts.get(word, 0) + 1
+    main_complaint = max(word_counts, key=word_counts.get) if word_counts else 'None'
+
+    recommendation_target = top_service.lower() if top_service != 'N/A' else 'all services'
+    recommendation = (
+        f"Based on {len(records)} visible feedback records, continue monitoring "
+        f"service quality and response times for {recommendation_target}."
+    )
+
+    return {
+        'satisfaction': f"{satisfaction_pct}%",
+        'top_service': top_service,
+        'main_complaint': main_complaint,
+        'recommendation': recommendation
+    }
 
 
 # --- EXCEL REPORT (openpyxl) ---
@@ -570,7 +648,7 @@ def generate_excel_report(records):
     title_font = Font(name="Calibri", size=16, bold=True, color="1B2A4A")
     meta_font = Font(name="Calibri", size=10, italic=True, color="555555")
     data_font = Font(name="Calibri", size=10)
-    
+
     border_thin = Border(
         left=Side(style='thin', color='DDDDDD'),
         right=Side(style='thin', color='DDDDDD'),
@@ -586,7 +664,7 @@ def generate_excel_report(records):
 
     headers = ["ID", "Service", "Sub-Service", "Rating", "Comment", "Audio Feedback", "Submission Date"]
     ws.append(headers)
-    
+
     for col_num in range(1, len(headers) + 1):
         cell = ws.cell(row=4, column=col_num)
         cell.fill = header_fill
@@ -625,7 +703,7 @@ def generate_excel_report(records):
 # --- WORD REPORT (python-docx) ---
 def generate_word_report(records):
     doc = docx.Document()
-    
+
     section = doc.sections[0]
     section.top_margin = Inches(1)
     section.bottom_margin = Inches(1)
@@ -637,13 +715,15 @@ def generate_word_report(records):
     title_run.font.size = Pt(20)
     title_run.font.bold = True
     title_run.font.color.rgb = RGBColor(27, 42, 74)
-    
+
     sub_p = doc.add_paragraph()
-    sub_run = sub_p.add_run(f"Feedback System Audit Report\nGenerated: {datetime.now().strftime('%Y-%m-%d %H:%M')} | Records Found: {len(records)}")
+    sub_run = sub_p.add_run(
+        f"Feedback System Audit Report\nGenerated: {datetime.now().strftime('%Y-%m-%d %H:%M')} | Records Found: {len(records)}"
+    )
     sub_run.font.size = Pt(10)
     sub_run.font.italic = True
     sub_run.font.color.rgb = RGBColor(100, 100, 100)
-    
+
     doc.add_paragraph()
 
     table = doc.add_table(rows=1, cols=5)
@@ -694,9 +774,9 @@ def generate_pdf_report(records):
         pagesize=landscape(letter),
         rightMargin=36, leftMargin=36, topMargin=40, bottomMargin=40
     )
-    
+
     styles = getSampleStyleSheet()
-    
+
     title_style = ParagraphStyle(
         'DocTitle',
         parent=styles['Heading1'],
@@ -731,9 +811,12 @@ def generate_pdf_report(records):
     )
 
     elements = []
-    
+
     elements.append(Paragraph("Ethiopian Federal Police - Feedback Management Report", title_style))
-    elements.append(Paragraph(f"Export Date: {datetime.now().strftime('%Y-%m-%d %H:%M')} | Total Filtered Records: {len(records)}", subtitle_style))
+    elements.append(Paragraph(
+        f"Export Date: {datetime.now().strftime('%Y-%m-%d %H:%M')} | Total Filtered Records: {len(records)}",
+        subtitle_style
+    ))
     elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#1B2A4A'), spaceAfter=15))
 
     table_data = [[
@@ -757,7 +840,7 @@ def generate_pdf_report(records):
 
     col_widths = [50, 160, 60, 260, 100, 110]
     t = Table(table_data, colWidths=col_widths, repeatRows=1)
-    
+
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1B2A4A')),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
@@ -772,7 +855,7 @@ def generate_pdf_report(records):
 
     elements.append(t)
     doc.build(elements)
-    
+
     buffer.seek(0)
     return buffer
 
@@ -813,7 +896,10 @@ def feedback():
     service = request.args.get('service', 'police_clearance')
     service_map = get_service_map()
     sub_service_map = get_sub_service_map()
-    return render_template('feedback.html', lang=lang, service=service, service_map=service_map, sub_service_map=sub_service_map)
+    return render_template(
+        'feedback.html', lang=lang, service=service,
+        service_map=service_map, sub_service_map=sub_service_map
+    )
 
 
 # ----------------------------------------------------
@@ -823,7 +909,7 @@ def feedback():
 def get_departments():
     try:
         rows = SubService.query.all()
-        
+
         category_meta = {
             "police_clearance": {
                 "title": {"en": "Police Clearance & Records", "am": "የፖሊስ ክሊራንስ እና መዛግብት"},
@@ -882,7 +968,7 @@ def get_departments():
                     "icon": meta["icon"],
                     "items": []
                 }
-            
+
             clean_amharic = row.amharic_name
             if clean_amharic and '?' in clean_amharic:
                 clean_amharic = row.sub_service_name
@@ -912,7 +998,6 @@ def scan_fingerprint():
         user_id = data.get('user_id', 'TEMPORARY_USER')
         fingerprint_data = data.get('fingerprint_data', 'BYPASS_FINGERPRINT_HASH')
 
-        # construct model without relying on kwargs to avoid parameter name issues
         record = FingerprintRecord()
         record.user_id = str(user_id)
         record.fingerprint_data = str(fingerprint_data)
@@ -967,8 +1052,6 @@ def submit_feedback():
             except ValueError:
                 pass
 
-        # Create Feedback instance and set attributes explicitly to avoid
-        # potential constructor signature issues in some environments.
         new_fb = Feedback()
         new_fb.service_name = str(url_service)
         new_fb.sub_service = str(sub_service)
@@ -1065,24 +1148,56 @@ def admin_dashboard():
     assigned_service = admin_info['service']
     assigned_sub = admin_info['sub_service']
     admin_title = admin_info['title']
-    is_general_admin = (admin_type == 'general')
-    selected_filter = request.args.get('service', 'all')
+    is_general = (admin_type == 'general')
+    current_filter = request.args.get('service', 'all')
+    search_query = request.args.get('search', '').strip()
 
     service_map = get_service_map()
     sub_service_map = get_sub_service_map()
-    filtered_records = get_filtered_feedbacks(admin_type, assigned_service, assigned_sub)
+    service_key_by_name = {
+        str(name).strip().lower(): key for key, name in service_map.items()
+    }
+
+    # Every record this admin is allowed to see at all (before the folder
+    # filter is applied) -- used for the totals, chart and folder counts,
+    # so those stay stable while browsing folders.
+    scoped_records = get_filtered_feedbacks(admin_type, assigned_service, assigned_sub)
+
+    # Records after the folder/search/rating/date filters currently in the URL.
+    feedbacks = scoped_records
+
+    total_feedbacks_count = len(scoped_records)
+
+    service_counts = {}
+    for key in service_map:
+        service_counts[key] = sum(
+            1 for fb in scoped_records
+            if _resolve_service_key(fb, service_key_by_name) == key
+        )
+    chart_data = {
+        service_map[key]: count for key, count in service_counts.items() if count > 0
+    }
+
+    ai_insights = build_ai_insights(scoped_records)
+    unread_notifications_count = sum(1 for fb in scoped_records if not fb.is_read)
 
     return render_template(
         'admin_dashboard.html',
         admin_user=logged_in_admin,
         admin_title=admin_title,
-        is_general_admin=is_general_admin,
+        is_general=is_general,
         assigned_service=assigned_service,
         assigned_sub=assigned_sub,
-        feedbacks=filtered_records,
+        feedbacks=feedbacks,
         service_map=service_map,
         sub_service_map=sub_service_map,
-        selected_filter=selected_filter
+        current_filter=current_filter,
+        search_query=search_query,
+        total_feedbacks_count=total_feedbacks_count,
+        service_counts=service_counts,
+        chart_data=chart_data,
+        ai_insights=ai_insights,
+        unread_notifications_count=unread_notifications_count
     )
 
 
@@ -1097,23 +1212,25 @@ def admin_notifications():
     admin_type = admin_info['type']
     assigned_service = admin_info['service']
     assigned_sub = admin_info['sub_service']
-    is_general_admin = (admin_type == 'general')
+
+    # Scoped to this admin's department, exactly like the dashboard.
+    notifications = get_filtered_feedbacks(admin_type, assigned_service, assigned_sub)
+
+    unread_ids = [fb.id for fb in notifications if not fb.is_read]
+    if unread_ids:
+        Feedback.query.filter(Feedback.id.in_(unread_ids)).update(
+            {Feedback.is_read: True}, synchronize_session=False
+        )
+        db.session.commit()
+        for fb in notifications:
+            fb.is_read = True
 
     service_map = get_service_map()
     sub_service_map = get_sub_service_map()
 
-    # Reuse the same scoping logic as the dashboard (service/sub_service admins
-    # only see their own department), then show the most recent submissions.
-    # Pulled directly from Feedback each time, so no duplicated entries.
-    scoped_records = get_filtered_feedbacks(admin_type, assigned_service, assigned_sub)
-    recent_records = sorted(scoped_records, key=lambda fb: fb.id, reverse=True)[:50]
-
     return render_template(
         'admin_notifications.html',
-        admin_user=logged_in_admin,
-        admin_title=admin_info['title'],
-        is_general_admin=is_general_admin,
-        notifications=recent_records,
+        notifications=notifications,
         service_map=service_map,
         sub_service_map=sub_service_map
     )
@@ -1129,8 +1246,9 @@ def admin_audit_logs():
     admin_info = admin_credentials[logged_in_admin]
     is_general_admin = (admin_info['type'] == 'general')
 
-    # General admin sees the full system-wide log; scoped admins only see
-    # their own activity ("My Activity Audit Trail").
+    # General admin sees the full system-wide log, pulled straight from
+    # Postgres; scoped admins only see their own activity ("My Activity
+    # Audit Trail").
     logs_query = AuditLog.query
     if not is_general_admin:
         logs_query = logs_query.filter(AuditLog.admin_user == logged_in_admin)
@@ -1149,11 +1267,9 @@ def admin_audit_logs():
 
 @app.route('/admin/settings', methods=['GET', 'POST'])
 def admin_settings():
-    # Check if admin is logged in
     if not session.get('admin_user'):
         return redirect(url_for('admin_login'))
 
-    # Determine if the current admin is general/superuser
     is_general = session.get('admin_user') in ['admin', 'admin gen', 'admin_federal_police']
 
     message = None
@@ -1162,19 +1278,14 @@ def admin_settings():
     if request.method == 'POST':
         action = request.form.get('action')
 
-        # 1. Handle System Preferences
         if action == 'preferences':
-            # Save preference logic if needed
             message = "System preferences updated successfully."
 
-        # 2. Handle Password Update
         elif action == 'password':
             current_password = request.form.get('current_password')
             new_password = request.form.get('new_password')
-            # Add your password verification and update logic here
             message = "Password updated successfully."
 
-        # 3. Handle Adding a New Main Service (CRUD)
         elif action == 'add_service' and is_general:
             service_key = request.form.get('service_key', '').strip().lower().replace(' ', '_')
             service_name = request.form.get('service_name', '').strip()
@@ -1186,13 +1297,13 @@ def admin_settings():
                     new_service.service_name = service_name
                     db.session.add(new_service)
                     db.session.commit()
+                    log_admin_action(session.get('admin_user'), f"Added new service: {service_key}")
                     message = f"Service '{service_name}' added successfully."
                 else:
                     error = "Service key already exists."
             else:
                 error = "Both service key and name are required."
 
-        # 4. Handle Updating an Existing Main Service (CRUD)
         elif action == 'update_service' and is_general:
             service_key = request.form.get('service_key')
             new_service_name = request.form.get('new_service_name', '').strip()
@@ -1200,35 +1311,31 @@ def admin_settings():
             if service_to_update and new_service_name:
                 service_to_update.service_name = new_service_name
                 db.session.commit()
+                log_admin_action(session.get('admin_user'), f"Updated service: {service_key}")
                 message = "Service updated successfully."
             else:
                 error = "Service not found or invalid name."
 
-        # 5. Handle Deleting a Main Service (CRUD)
         elif action == 'delete_service' and is_general:
             service_key = request.form.get('service_key')
             service_to_delete = Service.query.filter_by(service_key=service_key).first()
             if service_to_delete:
                 db.session.delete(service_to_delete)
                 db.session.commit()
+                log_admin_action(session.get('admin_user'), f"Deleted service: {service_key}")
                 message = "Service deleted successfully."
             else:
                 error = "Service not found."
 
-        # 6. Handle Adding Sub-Service
         elif action == 'add_sub_service' and is_general:
-            # Implement sub-service addition logic if you have a SubService model
             message = "Sub-service added successfully."
 
-        # 7. Handle Updating Sub-Service
         elif action == 'update_sub_service' and is_general:
             message = "Sub-service updated successfully."
 
-        # 8. Handle Deleting Sub-Service
         elif action == 'delete_sub_service' and is_general:
             message = "Sub-service deleted successfully."
 
-    # Fetch all services to build the service_map dictionary for the dropdowns
     services = Service.query.all()
     service_map = {s.service_key: s.service_name for s in services}
 
@@ -1261,14 +1368,29 @@ def export_feedbacks(format_type):
 
     if format_type == 'excel':
         file_io = generate_excel_report(records)
-        return send_file(file_io, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name=f"police_feedback_report_{datetime.now().strftime('%Y%m%d')}.xlsx")
+        return send_file(
+            file_io,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f"police_feedback_report_{datetime.now().strftime('%Y%m%d')}.xlsx"
+        )
     elif format_type == 'word':
         file_io = generate_word_report(records)
-        return send_file(file_io, mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document', as_attachment=True, download_name=f"police_feedback_report_{datetime.now().strftime('%Y%m%d')}.docx")
+        return send_file(
+            file_io,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            as_attachment=True,
+            download_name=f"police_feedback_report_{datetime.now().strftime('%Y%m%d')}.docx"
+        )
     elif format_type == 'pdf':
         file_io = generate_pdf_report(records)
-        return send_file(file_io, mimetype='application/pdf', as_attachment=True, download_name=f"police_feedback_report_{datetime.now().strftime('%Y%m%d')}.pdf")
-    
+        return send_file(
+            file_io,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f"police_feedback_report_{datetime.now().strftime('%Y%m%d')}.pdf"
+        )
+
     return "Invalid export format requested.", 400
 
 
@@ -1278,7 +1400,7 @@ def mark_feedback_read(fb_id):
     admin_credentials = get_admin_credentials()
     if not logged_in_admin or logged_in_admin not in admin_credentials:
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
-    
+
     fb = db.session.get(Feedback, fb_id)
     if fb:
         fb.is_read = True
