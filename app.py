@@ -1420,6 +1420,9 @@ def delete_feedback(fb_id):
         log_admin_action(logged_in_admin, f"Deleted feedback record #{fb_id}.")
 
     return redirect(url_for('admin_dashboard'))
+@app.route('/health')
+def health_check():
+    return "OK", 200
 
 
 if __name__ == '__main__':
