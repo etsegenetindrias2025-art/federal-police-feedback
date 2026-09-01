@@ -8,3 +8,5 @@ better_profanity
 python-docx
 openpyxl
 reportlab
+Flask-SQLAlchemy
+sqlalchemy
