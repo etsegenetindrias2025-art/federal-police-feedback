@@ -126,6 +126,20 @@
                     <p class="text-sm">Connecting to PostgreSQL database...</p>
                 </div>
             </div>
+
+            <!-- Custom Service Request Box: Moved here to Main Categories View -->
+            <div id="custom-request-box" class="mt-6 p-5 rounded-2xl border border-amber-500/30 bg-slate-900/60 backdrop-blur-md">
+                <h4 class="text-sm font-bold text-amber-400 mb-2">Did you not find the service you need?</h4>
+                <p class="text-xs opacity-75 mb-3">If you did not get the service you are looking for from the list above, please write the service or request you need here.</p>
+
+                <textarea id="customServiceInput" rows="3" placeholder="Write the service or request you need here..." class="w-full bg-slate-950/80 border border-amber-500/40 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-amber-400 resize-none"></textarea>
+
+                <div class="mt-3 text-right">
+                    <button onclick="submitCustomServiceRequest()" class="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-bold px-6 py-2 rounded-xl text-xs shadow-lg transition-all duration-300">
+                        Submit Request
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Sub-Services View -->
@@ -158,6 +172,7 @@
 
     <script>
         let departmentsData = {};
+        let selectedCategoryKey = '';
         const urlParams = new URLSearchParams(window.location.search);
         const currentLang = urlParams.get('lang') || 'en';
 
@@ -211,6 +226,7 @@
         }
 
         function showSubServices(categoryKey) {
+            selectedCategoryKey = categoryKey;
             const catData = departmentsData[categoryKey];
             if (!catData) return;
 
@@ -239,6 +255,22 @@
 
             document.getElementById('main-categories-view').classList.add('hidden');
             document.getElementById('sub-services-view').classList.remove('hidden');
+        }
+
+        // Custom request: if the citizen cannot find the required service,
+        // continue to the existing feedback page with the written request.
+        function submitCustomServiceRequest() {
+            const input = document.getElementById('customServiceInput');
+            const requestText = input.value.trim();
+
+            if (!requestText) {
+                alert('Please write the service or request you need.');
+                input.focus();
+                return;
+            }
+
+            const service = selectedCategoryKey || 'other';
+            window.location.href = `/feedback?service=${encodeURIComponent(service)}&sub_service=custom_request&custom_service=${encodeURIComponent(requestText)}&lang=${encodeURIComponent(currentLang)}`;
         }
 
         function backToCategories() {

@@ -1027,18 +1027,24 @@ def submit_feedback():
         if not data:
             return jsonify({"status": "error", "message": "No data received"}), 400
 
+        raw_service = data.get('service') or data.get('category') or data.get('service_name', '')
+        
+        if str(raw_service).strip().lower() in ['other', 'additional_request', '']:
+            url_service = 'additional_request'
+            sub_service = data.get('custom_service') or data.get('sub_service', 'unlisted_comment')
+        else:
+            url_service = str(raw_service).strip().lower()
+            sub_service = data.get('sub_service', 'general_service')
+
         rating = data.get('rating', '😊')
         comment = data.get('comment', 'No comment provided.')
-        sub_service = data.get('sub_service', 'general_service')
         audio_status = data.get('audio_status', 'No audio recorded')
-
-        url_service = data.get('service') or data.get('category') or data.get('service_name', 'police_clearance')
         client_timestamp = data.get('timestamp')
 
         if is_inappropriate(comment):
             return jsonify({
                 "status": "error",
-                "message": "Inappropriate language detected. Please keep your feedback respectful."
+                "message": "ያልተገባ ቃል ተገኝቷል። እባክዎን በትህትና አስተያየትዎን ያስቀምጡ። / Inappropriate language detected. Please keep your feedback respectful."
             }), 400
 
         parsed_ts = datetime.utcnow()
@@ -1061,13 +1067,62 @@ def submit_feedback():
 
         session['feedback_count'] = feedback_count + 1
 
+        exact_user_message = "መልእክቱ ተልኳል አገልግሎቱን ስለተጠቀሙ እናመሰግናለን!!!"
+
         return jsonify({
             "status": "success",
-            "message": f"Feedback saved successfully! ({session['feedback_count']}/3 submitted)"
+            "successTitle": "እናመሰግናለን! 😊",
+            "message": exact_user_message,
+            "count": f"({session['feedback_count']}/3 submitted)"
         })
     except Exception as e:
-        traceback.print_exc()
+        print("DATABASE ERROR:", str(e))
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/admin/notifications')
+def admin_notifications():
+    logged_in_admin = session.get('admin_user')
+    admin_credentials = get_admin_credentials()
+    if not logged_in_admin or logged_in_admin not in admin_credentials:
+        return redirect(url_for('admin_login'))
+
+    admin_info = admin_credentials[logged_in_admin]
+    admin_type = admin_info['type']
+    assigned_service = admin_info['service']
+    assigned_sub = admin_info['sub_service']
+
+    notifications = get_filtered_feedbacks(admin_type, assigned_service, assigned_sub)
+
+    unread_ids = [fb.id for fb in notifications if not fb.is_read]
+    if unread_ids:
+        Feedback.query.filter(Feedback.id.in_(unread_ids)).update(
+            {Feedback.is_read: True}, synchronize_session=False
+        )
+        db.session.commit()
+        for fb in notifications:
+            fb.is_read = True
+    
+    service_map = {
+        "crime_investigation_complaints": "Crime Investigation & Complaints",
+        "education_training": "Education & Training",
+        "it_help_desk": "IT Help Desk",
+        "medical_services": "Medical Services",
+        "human_resources": "Human Resources",
+        "logistics_fleet": "Logistics & Fleet",
+        "general_support_admin": "General Support & Admin",
+        "police_clearance_records": "Police Clearance & Records",
+        "additional_request": "Unlisted Service Request"
+    }
+
+    sub_service_map = get_sub_service_map() if 'get_sub_service_map' in globals() else {}
+
+    return render_template(
+        'admin_notifications.html',
+        notifications=notifications,
+        service_map=service_map,
+        sub_service_map=sub_service_map
+    )
 
 
 @app.route('/api/unread-count')
@@ -1195,41 +1250,6 @@ def admin_dashboard():
         chart_data=chart_data,
         ai_insights=ai_insights,
         unread_notifications_count=unread_notifications_count
-    )
-
-
-@app.route('/admin/notifications')
-def admin_notifications():
-    logged_in_admin = session.get('admin_user')
-    admin_credentials = get_admin_credentials()
-    if not logged_in_admin or logged_in_admin not in admin_credentials:
-        return redirect(url_for('admin_login'))
-
-    admin_info = admin_credentials[logged_in_admin]
-    admin_type = admin_info['type']
-    assigned_service = admin_info['service']
-    assigned_sub = admin_info['sub_service']
-
-    # Scoped to this admin's department, exactly like the dashboard.
-    notifications = get_filtered_feedbacks(admin_type, assigned_service, assigned_sub)
-
-    unread_ids = [fb.id for fb in notifications if not fb.is_read]
-    if unread_ids:
-        Feedback.query.filter(Feedback.id.in_(unread_ids)).update(
-            {Feedback.is_read: True}, synchronize_session=False
-        )
-        db.session.commit()
-        for fb in notifications:
-            fb.is_read = True
-
-    service_map = get_service_map()
-    sub_service_map = get_sub_service_map()
-
-    return render_template(
-        'admin_notifications.html',
-        notifications=notifications,
-        service_map=service_map,
-        sub_service_map=sub_service_map
     )
 
 
