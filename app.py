@@ -6,6 +6,11 @@ import socket
 import time
 import traceback
 from datetime import datetime
+from flask import Flask, request, jsonify
+from openai import OpenAI
+
+app = Flask(__name__)
+client = OpenAI(api_key="YOUR_OPENAI_API_KEY")
 
 from sqlalchemy import or_, and_, inspect, text as sql_text
 from flask_sqlalchemy import SQLAlchemy
@@ -1175,7 +1180,23 @@ def api_unread_count():
     except Exception:
         unread_count = 0
     return jsonify({"unread_count": unread_count})
+@app.route('/api/comment', methods=['POST'])
+def post_comment():
+    data = request.get_json()
+    user_comment = data.get('comment', '')
 
+    # 1. Run OpenAI Moderation check using the modern client
+    moderation_response = client.moderations.create(input=user_comment)
+    output = moderation_response.results[0]
+
+    if output.flagged:
+        # Terminates/rejects the comment right here
+        return jsonify({
+            "error": "Your comment contains content that violates our community guidelines."
+        }), 400
+
+    # 2. Save clean comment to database...
+    return jsonify({"success": "Comment posted successfully!"}), 200
 
 @app.route('/api/notifications/unread-count')
 def api_notifications_unread_count():
