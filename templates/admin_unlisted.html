@@ -1,0 +1,41 @@
+<div class="container mt-4">
+    <h2>Pending Unlisted Service Requests</h2>
+    <table class="table table-dark table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Requested Service / Text</th>
+                <th>Date Submitted</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for req in requests %}
+            <tr>
+                <td>#{{ req.id }}</td>
+                <td>{{ req.service_name }}</td>
+                <td>{{ req.date_submitted }}</td>
+                <td>
+                    <form action="{{ url_for('manage_unlisted_services') }}" method="POST" class="d-inline">
+                        <input type="hidden" name="request_id" value="{{ req.id }}">
+                        <input type="hidden" name="service_name" value="{{ req.service_name }}">
+                        <div class="input-group input-group-sm">
+                            <select name="category" class="form-select form-select-sm" required>
+                                <option value="">Select Category...</option>
+                                <option value="Crime Investigation & Complaints">Crime Investigation & Complaints</option>
+                                <option value="IT Help Desk">IT Help Desk</option>
+                                <option value="Medical Services">Medical Services</option>
+                            </select>
+                            <button type="submit" class="btn btn-success btn-sm">Add as Official Service</button>
+                        </div>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="text-center">No pending unlisted service requests.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

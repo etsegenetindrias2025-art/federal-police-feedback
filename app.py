@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
+from flask import Flask, flash, render_template, request, jsonify, session, redirect, url_for, send_file
 import io
 import os
 import re
@@ -10,6 +10,9 @@ from datetime import datetime
 from sqlalchemy import or_, and_, inspect, text as sql_text
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import check_password_hash, generate_password_hash
+# Place this at the VERY BOTTOM of app.py
+from models import UnlistedServiceRequest, Feedback  # type: ignore
+from extensions import db
 
 # Excel styling imports
 import openpyxl
@@ -1014,43 +1017,77 @@ def scan_fingerprint():
 # ----------------------------------------------------
 @app.route('/submit-feedback', methods=['POST'])
 @app.route('/api/submit-feedback', methods=['POST'])
+@app.route('/submit_feedback', methods=['POST'])
 def submit_feedback():
     try:
         feedback_count = session.get('feedback_count', 0)
         if feedback_count >= 3:
-            return jsonify({
-                "status": "error",
-                "message": "ለአሁኑ የተፈቀደልዎትን 3 አስተያየቶች ጨርሰዋል! / You have reached your max limit of 3 feedbacks for this session."
-            }), 403
+            if request.content_type and 'application/json' in request.content_type:
+                return jsonify({
+                    "status": "error",
+                    "message": "ለአሁኑ የተፈቀደልዎትን 3 አስተያየቶች ጨርሰዋል! / You have reached your max limit of 3 feedbacks for this session."
+                }), 403
+            return redirect(url_for('admin_login'))  # Or appropriate error handling/redirect for form posts
 
-        data = request.get_json()
-        if not data:
-            return jsonify({"status": "error", "message": "No data received"}), 400
+        # Handle both JSON API requests and standard form submissions
+        if request.content_type and 'application/json' in request.content_type:
+            data = request.get_json()
+            if not data:
+                return jsonify({"status": "error", "message": "No data received"}), 400
 
-        raw_service = data.get('service') or data.get('category') or data.get('service_name', '')
-        
+            raw_service = data.get('service') or data.get('category') or data.get('service_name', '')
+            unlisted_service_text = (
+                data.get('unlisted_service') or 
+                data.get('custom_service') or 
+                data.get('custom_request') or 
+                ''
+            ).strip()
+            rating = data.get('rating', '😊')
+            comment = data.get('comment', 'No comment provided.')
+            audio_status = data.get('audio_status', 'No audio recorded')
+            client_timestamp = data.get('timestamp')
+        else:
+            raw_service = request.form.get('service') or request.form.get('category') or request.form.get('service_name', '')
+            unlisted_service_text = (
+                request.form.get('unlisted_service') or 
+                request.form.get('custom_service') or 
+                request.form.get('custom_request') or 
+                ''
+            ).strip()
+            rating = request.form.get('rating', '😊')
+            comment = request.form.get('comment', 'No comment provided.').strip()
+            audio_status = request.form.get('audio_status', 'No audio recorded')
+            client_timestamp = request.form.get('timestamp')
+
+        # Handle unlisted service text integration
+        if unlisted_service_text:
+            if comment and comment != "No comment provided.":
+                comment = f"Unlisted Service: {unlisted_service_text} | Comment: {comment}"
+            else:
+                comment = f"Unlisted Service: {unlisted_service_text}"
+
+        if not comment:
+            comment = "No comment provided."
+
         if str(raw_service).strip().lower() in ['other', 'additional_request', '']:
             url_service = 'additional_request'
-            sub_service = data.get('custom_service') or data.get('sub_service', 'unlisted_comment')
+            sub_service = unlisted_service_text or (data.get('custom_service') if 'data' in locals() and data else request.form.get('custom_service')) or 'unlisted_comment'
         else:
             url_service = str(raw_service).strip().lower()
-            sub_service = data.get('sub_service', 'general_service')
-
-        rating = data.get('rating', '😊')
-        comment = data.get('comment', 'No comment provided.')
-        audio_status = data.get('audio_status', 'No audio recorded')
-        client_timestamp = data.get('timestamp')
+            sub_service = (data.get('sub_service', 'general_service') if 'data' in locals() and data else request.form.get('sub_service', 'general_service'))
 
         if is_inappropriate(comment):
-            return jsonify({
-                "status": "error",
-                "message": "ያልተገባ ቃል ተገኝቷል። እባክዎን በትህትና አስተያየትዎን ያስቀምጡ። / Inappropriate language detected. Please keep your feedback respectful."
-            }), 400
+            if request.content_type and 'application/json' in request.content_type:
+                return jsonify({
+                    "status": "error",
+                    "message": "ያልተገባ ቃል ተገኝቷል። እባክዎን በትህትና አስተያየትዎን ያስቀምጡ። / Inappropriate language detected. Please keep your feedback respectful."
+                }), 400
+            return redirect(url_for('admin_login'))
 
         parsed_ts = datetime.utcnow()
         if client_timestamp:
             try:
-                parsed_ts = datetime.strptime(client_timestamp.split('.')[0], '%Y-%m-%d %H:%M:%S')
+                parsed_ts = datetime.strptime(str(client_timestamp).split('.')[0], '%Y-%m-%d %H:%M:%S')
             except ValueError:
                 pass
 
@@ -1067,17 +1104,24 @@ def submit_feedback():
 
         session['feedback_count'] = feedback_count + 1
 
-        exact_user_message = "መልእክቱ ተልኳል አገልግሎቱን ስለተጠቀሙ እናመሰግናለን!!!"
+        if request.content_type and 'application/json' in request.content_type:
+            exact_user_message = "መልእክቱ ተልኳል አገልግሎቱን ስለተጠቀሙ እናመሰግናለን!!!"
+            return jsonify({
+                "status": "success",
+                "successTitle": "እናመሰግናለን! 😊",
+                "message": exact_user_message,
+                "count": f"({session['feedback_count']}/3 submitted)"
+            })
+        
+        return redirect(url_for('thank_you_page') if 'thank_you_page' in globals() else url_for('admin_dashboard'))
 
-        return jsonify({
-            "status": "success",
-            "successTitle": "እናመሰግናለን! 😊",
-            "message": exact_user_message,
-            "count": f"({session['feedback_count']}/3 submitted)"
-        })
     except Exception as e:
+        db.session.rollback()
         print("DATABASE ERROR:", str(e))
-        return jsonify({"status": "error", "message": str(e)}), 500
+        if request.content_type and 'application/json' in request.content_type:
+            return jsonify({"status": "error", "message": str(e)}), 500
+        return f"Database Error: {str(e)}", 500
+
 
 
 @app.route('/admin/notifications')
@@ -1102,7 +1146,7 @@ def admin_notifications():
         db.session.commit()
         for fb in notifications:
             fb.is_read = True
-    
+
     service_map = {
         "crime_investigation_complaints": "Crime Investigation & Complaints",
         "education_training": "Education & Training",
@@ -1123,7 +1167,6 @@ def admin_notifications():
         service_map=service_map,
         sub_service_map=sub_service_map
     )
-
 
 @app.route('/api/unread-count')
 def api_unread_count():
@@ -1210,12 +1253,10 @@ def admin_dashboard():
         str(name).strip().lower(): key for key, name in service_map.items()
     }
 
-    # Every record this admin is allowed to see at all (before the folder
-    # filter is applied) -- used for the totals, chart and folder counts,
-    # so those stay stable while browsing folders.
+    # Every record this admin is allowed to see at all (used for totals, charts, and counts)
     scoped_records = get_filtered_feedbacks(admin_type, assigned_service, assigned_sub)
 
-    # Records after the folder/search/rating/date filters currently in the URL.
+    # Records after filters/search
     feedbacks = scoped_records
 
     total_feedbacks_count = len(scoped_records)
@@ -1226,11 +1267,12 @@ def admin_dashboard():
             1 for fb in scoped_records
             if _resolve_service_key(fb, service_key_by_name) == key
         )
+
     chart_data = {
         service_map[key]: count for key, count in service_counts.items() if count > 0
     }
 
-    ai_insights = build_ai_insights(scoped_records)
+    ai_insights = build_ai_insights(scoped_records) if 'build_ai_insights' in globals() else None
     unread_notifications_count = sum(1 for fb in scoped_records if not fb.is_read)
 
     return render_template(
@@ -1252,6 +1294,45 @@ def admin_dashboard():
         unread_notifications_count=unread_notifications_count
     )
 
+@app.route('/admin/unlisted-services', methods=['GET', 'POST'])
+def manage_unlisted_services():
+    logged_in_admin = session.get('admin_user')
+    admin_credentials = get_admin_credentials()
+    if not logged_in_admin or logged_in_admin not in admin_credentials:
+        return redirect(url_for('admin_login'))
+
+    if request.method == 'POST':
+        try:
+            official_service_name = request.form.get('service_name')
+            request_id = request.form.get('request_id')
+
+            if request_id:
+                req_item = UnlistedServiceRequest.query.get(request_id)
+                if req_item:
+                    req_item.status = 'Added'
+                    if not official_service_name:
+                        official_service_name = req_item.service_name
+
+            if official_service_name:
+                service_key = official_service_name.strip().lower().replace(' ', '_')
+                existing_service = Service.query.filter_by(service_key=service_key).first()
+                if not existing_service:
+                    new_service = Service()
+                    new_service.service_key = service_key
+                    new_service.service_name = official_service_name
+                    db.session.add(new_service)
+
+            db.session.commit()
+            if 'flash' in globals():
+                flash('Service successfully added to the active list!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            print("ERROR ADDING SERVICE:", str(e))
+
+        return redirect(url_for('manage_unlisted_services'))
+
+    unlisted_requests = UnlistedServiceRequest.query.filter_by(status='Pending').all()
+    return render_template('admin_unlisted.html', requests=unlisted_requests)
 
 @app.route('/admin/audit-logs')
 def admin_audit_logs():
