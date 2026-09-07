@@ -8,8 +8,10 @@ import traceback
 from datetime import datetime
 from flask import Flask, request, jsonify
 from openai import OpenAI
-
+from config import Config
+from extensions import db
 app = Flask(__name__)
+app.config.from_object(Config)
 client = OpenAI(api_key="YOUR_OPENAI_API_KEY")
 
 from sqlalchemy import or_, and_, inspect, text as sql_text
@@ -40,6 +42,10 @@ from reportlab.lib import colors
 
 import psycopg2
 import psycopg2.extras
+db.init_app(app)
+
+with app.app_context():
+    db.create_all()
 
 try:
     from better_profanity import profanity  # type: ignore[import-not-found]
