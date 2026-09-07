@@ -11,3 +11,4 @@ reportlab
 Flask-SQLAlchemy
 sqlalchemy
 openai
+python-dotenv
