@@ -290,24 +290,65 @@
     </div>
 
     <script>
-        function scanFingerprint() {
+        function b64urlToBuf(s) {
+            const p = '='.repeat((4 - s.length % 4) % 4);
+            const raw = atob((s + p).replace(/-/g, '+').replace(/_/g, '/'));
+            const buf = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; i++) buf[i] = raw.charCodeAt(i);
+            return buf.buffer;
+        }
+        function bufToB64url(buf) {
+            let str = '';
+            new Uint8Array(buf).forEach(b => str += String.fromCharCode(b));
+            return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+
+        async function scanFingerprint() {
             const scannerBox = document.getElementById('scannerBox');
             scannerBox.classList.add('scanning');
+            try {
+                const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+                if (!available) {
+                    alert('No fingerprint/biometric sensor found on this device.');
+                    return;
+                }
 
-            setTimeout(() => {
-                fetch('/api/fingerprint/scan', {
+                const chal = await (await fetch('/api/fingerprint/challenge')).json();
+
+                const credential = await navigator.credentials.create({
+                    publicKey: {
+                        challenge: b64urlToBuf(chal.challenge),
+                        rp: { name: chal.rpName, id: chal.rpId },
+                        user: {
+                            id: crypto.getRandomValues(new Uint8Array(16)),
+                            name: 'kiosk-guest',
+                            displayName: 'Kiosk Guest'
+                        },
+                        pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+                        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+                        timeout: 60000,
+                        attestation: 'none'
+                    }
+                });
+
+                const res = await fetch('/api/fingerprint/scan', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: 'GUEST_USER', fingerprint_data: 'SAMPLE_HASH' })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    window.location.href = '/welcome';
-                })
-                .catch(err => {
-                    window.location.href = '/welcome';
+                    body: JSON.stringify({
+                        clientDataJSON: bufToB64url(credential.response.clientDataJSON),
+                        authenticatorData: bufToB64url(credential.response.getAuthenticatorData())
+                    })
                 });
-            }, 1200);
+                const result = await res.json();
+
+                if (result.status === 'success') window.location.href = '/welcome';
+                else alert(result.message || 'Verification failed. Please try again.');
+            } catch (err) {
+                console.error(err);
+                alert('Fingerprint scan cancelled or failed.');
+            } finally {
+                scannerBox.classList.remove('scanning');
+            }
         }
     </script>
 </body>

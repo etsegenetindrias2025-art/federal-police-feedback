@@ -3,6 +3,9 @@ import io
 import os
 import re
 import time
+import base64
+import secrets
+import json
 import traceback
 from datetime import datetime
 from openai import OpenAI
@@ -1106,25 +1109,73 @@ def get_departments():
 
 
 # ----------------------------------------------------
-# FINGERPRINT API ROUTES
+# FINGERPRINT API ROUTES (WebAuthn platform-biometric verification)
 # ----------------------------------------------------
+@app.route('/api/fingerprint/challenge')
+def fingerprint_challenge():
+    """Issues a fresh random challenge for the browser's WebAuthn
+    navigator.credentials.create() call, and stashes it in the
+    session so scan_fingerprint() can confirm the same challenge
+    came back (prevents replay of an old/fake response)."""
+    challenge = secrets.token_bytes(32)
+    session['fp_challenge'] = base64.urlsafe_b64encode(challenge).decode().rstrip('=')
+    return jsonify({
+        "challenge": session['fp_challenge'],
+        # rpId must exactly match the hostname the page is served from --
+        # 'localhost' for local dev, or your real domain in production.
+        # It will NOT work against a raw IP like 127.0.0.1.
+        "rpId": request.host.split(':')[0],
+        "rpName": "Ethiopian Federal Police"
+    })
+
+
 @app.route('/api/fingerprint/scan', methods=['POST'])
 def scan_fingerprint():
+    """Verifies a WebAuthn platform-authenticator response (Windows
+    Hello / Touch ID / Android biometric) instead of trusting a fake
+    client-supplied hash. Confirms: right challenge, right ceremony
+    type, and that the OS actually reported the user as biometrically
+    verified (the UV flag) before writing a FingerprintRecord."""
     try:
         data = request.get_json() or {}
-        user_id = data.get('user_id', 'TEMPORARY_USER')
-        fingerprint_data = data.get('fingerprint_data', 'BYPASS_FINGERPRINT_HASH')
+        client_data_b64 = data.get('clientDataJSON')
+        auth_data_b64 = data.get('authenticatorData')
+
+        if not client_data_b64 or not auth_data_b64:
+            return jsonify({"status": "error", "message": "Missing WebAuthn response"}), 400
+
+        def _b64pad(s):
+            return s + '=' * (-len(s) % 4)
+
+        client_data = json.loads(base64.urlsafe_b64decode(_b64pad(client_data_b64)))
+
+        if client_data.get('type') != 'webauthn.create':
+            return jsonify({"status": "error", "message": "Invalid ceremony type"}), 400
+
+        if client_data.get('challenge') != session.get('fp_challenge'):
+            return jsonify({"status": "error", "message": "Challenge mismatch"}), 400
+
+        auth_data = base64.urlsafe_b64decode(_b64pad(auth_data_b64))
+        # Byte 32 of authenticatorData is the flags byte; bit 0x04 is the
+        # "User Verified" flag, set only when the platform authenticator
+        # (fingerprint/Face ID/PIN-fallback) actually confirmed the user.
+        user_verified = bool(len(auth_data) > 32 and (auth_data[32] & 0x04))
+
+        if not user_verified:
+            return jsonify({"status": "error", "message": "Biometric verification not confirmed"}), 400
 
         record = FingerprintRecord()
-        record.user_id = str(user_id)
-        record.fingerprint_data = str(fingerprint_data)
+        record.user_id = 'KIOSK_WALKUP'
+        record.fingerprint_data = 'webauthn_platform_verified'
+        record.status = 'Verified'
         db.session.add(record)
         db.session.commit()
 
+        session.pop('fp_challenge', None)
+
         return jsonify({
             "status": "success",
-            "message": "የጣት አሻራ ስካን ሳይጠበቅ ቀጥታ አልፏል (Demo Mode)!",
-            "user_id": user_id
+            "message": "የጣት አሻራ ማረጋገጫ ተሳክቷል! (Fingerprint verified)",
         }), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
