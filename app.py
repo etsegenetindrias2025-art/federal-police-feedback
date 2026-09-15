@@ -2,24 +2,19 @@ from flask import Flask, flash, render_template, request, jsonify, session, redi
 import io
 import os
 import re
-import socket
 import time
 import traceback
 from datetime import datetime
-from flask import Flask, request, jsonify
 from openai import OpenAI
 from config import Config
 from extensions import db
-app = Flask(__name__)
-app.config.from_object(Config)
-client = OpenAI(api_key="YOUR_OPENAI_API_KEY")
 
-from sqlalchemy import or_, and_, inspect, text as sql_text
-from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import inspect, text as sql_text
 from werkzeug.security import check_password_hash, generate_password_hash
-# Place this at the VERY BOTTOM of app.py
+
+# Place this near the bottom in the original file; kept here so the
+# names exist before any route references them.
 from models import UnlistedServiceRequest, Feedback  # type: ignore
-from extensions import db
 
 # Excel styling imports
 import openpyxl
@@ -42,10 +37,116 @@ from reportlab.lib import colors
 
 import psycopg2
 import psycopg2.extras
+
+
+# ----------------------------------------------------
+# SINGLE FLASK APP + DATABASE INITIALIZATION
+#
+# FIX: the original file created `Flask(__name__)` twice. The second
+# call silently threw away everything set on the first instance,
+# including `app.config.from_object(Config)`. There must be exactly
+# ONE `Flask(__name__)` call, and every config line must apply to it.
+# ----------------------------------------------------
+app = Flask(__name__)
+app.config.from_object(Config)
+
+# Ensure Flask's session configuration catches the secret key securely
+secret_val = os.getenv('FLASK_SECRET_KEY') or app.config.get('SECRET_KEY') or 'federal_police_secret_key'
+app.config['SECRET_KEY'] = secret_val
+app.secret_key = secret_val
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", "YOUR_OPENAI_API_KEY"))
+
+# ----------------------------------------------------
+# DATABASE_URL: reachable cloud DB when you have it, automatic local
+# SQLite fallback when you don't.
+#
+# FIX: previously, if DATABASE_URL was set at all (e.g. loaded from a
+# .env file, which is the normal way to configure this) the app always
+# tried that database -- even with no internet -- and crashed. Now the
+# configured database is actively tested at startup. If it can't be
+# reached within a few seconds, the app automatically switches to a
+# local SQLite file for this run instead of dying. You don't have to
+# edit .env or unset anything to work offline; when you're back online
+# and DATABASE_URL is reachable again, it's used automatically too.
+# ----------------------------------------------------
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+LOCAL_SQLITE_PATH = os.path.join(BASE_DIR, "local_dev.db")
+
+
+def _postgres_is_reachable(url, timeout=3):
+    try:
+        test_conn = psycopg2.connect(url, connect_timeout=timeout)
+        test_conn.close()
+        return True
+    except Exception as e:
+        print(f"[startup] Configured database is unreachable: {e}")
+        return False
+
+
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{LOCAL_SQLITE_PATH}")
+
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+if DATABASE_URL.startswith("postgresql") and not _postgres_is_reachable(DATABASE_URL):
+    print("[startup] Falling back to a local SQLite database for this run:")
+    print(f"[startup]   {LOCAL_SQLITE_PATH}")
+    print("[startup] (Your .env DATABASE_URL is untouched -- once that Postgres")
+    print("[startup] database is reachable again, it'll be used automatically.)")
+    DATABASE_URL = f"sqlite:///{LOCAL_SQLITE_PATH}"
+
+USING_SQLITE = DATABASE_URL.startswith("sqlite:")
+
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = (
+    {} if USING_SQLITE else {"pool_pre_ping": True}
+)
+
 db.init_app(app)
 
+# FIX: db.create_all() used to run unguarded, so any database problem
+# (wrong URL, DB asleep, no internet) crashed the whole app before it
+# could even start. Now a failure here prints a clear explanation and
+# lets the app boot anyway; DB-dependent pages will show an error
+# until the database is reachable, but the process won't die outright.
+DB_AVAILABLE = True
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+    except Exception as e:
+        DB_AVAILABLE = False
+        print("=" * 70)
+        print("[startup] WARNING: could not reach the database on startup.")
+        print(f"[startup] {e}")
+        if not USING_SQLITE:
+            print("[startup] You're pointed at a cloud database (DATABASE_URL is")
+            print("[startup] set). This almost always means your machine has no")
+            print("[startup] internet connection right now, or the DB host is down.")
+            print("[startup] To develop fully offline, unset DATABASE_URL and the")
+            print("[startup] app will fall back to a local SQLite file instead.")
+        print("[startup] The app will still start, but pages that read or write")
+        print("[startup] feedback data will error until the database is reachable.")
+        print("=" * 70)
+
+def get_db_connection():
+    """Raw psycopg2 connection, kept available for any ad-hoc queries.
+
+    FIX: this used to hardcode host="localhost", user, and password,
+    so it would only ever work on your own machine even after the app
+    itself was deployed elsewhere. It now reuses the same DATABASE_URL
+    the rest of the app uses, so it follows the deployment wherever it
+    runs. Everything in this file that talks to feedback data goes
+    through the SQLAlchemy models instead of this function.
+    """
+    if USING_SQLITE:
+        raise RuntimeError(
+            "get_db_connection() only works against Postgres. You're currently "
+            "running on the local SQLite fallback (no DATABASE_URL set)."
+        )
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    return conn
+
 
 try:
     from better_profanity import profanity  # type: ignore[import-not-found]
@@ -73,45 +174,6 @@ except ImportError:
             return False
 
     profanity = _FallbackProfanity()
-
-
-# ----------------------------------------------------
-# SINGLE FLASK APP + DATABASE INITIALIZATION
-# ----------------------------------------------------
-app = Flask(__name__)
-app.secret_key = os.getenv('FLASK_SECRET_KEY', 'federal_police_secret_key')
-
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:2323@localhost:5432/federal_police_feedback"
-)
-
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
-app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_pre_ping": True,
-}
-
-db = SQLAlchemy(app)
-
-
-def get_db_connection():
-    """Raw psycopg2 connection, kept available for any ad-hoc queries.
-    Everything in this file that talks to feedback data now goes through
-    the SQLAlchemy models instead, since mixing raw cursors with the ORM
-    was the source of the Pylance/runtime bugs in /admin/notifications."""
-    conn = psycopg2.connect(
-        dbname="federal_police_feedback",
-        user="postgres",
-        password="2323",
-        host="localhost",
-        port="5432",
-        cursor_factory=psycopg2.extras.RealDictCursor
-    )
-    return conn
 
 
 # ----------------------------------------------------
@@ -411,8 +473,16 @@ def init_db():
         db.session.commit()
 
 
-init_db()
-print("[startup] Successfully initialized PostgreSQL database tables.")
+if DB_AVAILABLE:
+    try:
+        init_db()
+        print("[startup] Successfully initialized database tables "
+              f"({'local SQLite' if USING_SQLITE else 'PostgreSQL'}).")
+    except Exception as e:
+        DB_AVAILABLE = False
+        print(f"[startup] Skipped default-data initialization: {e}")
+else:
+    print("[startup] Skipped default-data initialization (database unreachable).")
 
 
 def log_admin_action(username, description):
@@ -501,6 +571,23 @@ def get_admin_credentials():
 # ----------------------------------------------------
 # ADVANCED SEARCH, FILTER & REPORT BUILDERS
 # ----------------------------------------------------
+@app.route('/submit-unlisted', methods=['POST'])
+def submit_unlisted():
+    unlisted_text = request.form.get('unlisted_request')
+    
+    if unlisted_text:
+        # Create a feedback record explicitly tagged as Additional Requests
+        new_feedback = Feedback()
+        new_feedback.service_name = 'additional_request'
+        new_feedback.sub_service = 'Unlisted Request / Comment'
+        new_feedback.rating = '💬 (Unlisted)'
+        new_feedback.comment = unlisted_text
+        new_feedback.timestamp = datetime.utcnow()
+        db.session.add(new_feedback)
+        db.session.commit()
+        
+    flash('Your request has been submitted successfully!', 'success')
+    return redirect(url_for('services'))
 def _resolve_service_key(fb, service_key_by_name):
     """Best-effort normalization of a feedback row's stored service_name
     into one of the canonical service_key values from the services table."""
@@ -622,6 +709,9 @@ def build_ai_insights(records):
         key = str(fb.service_name).strip().lower()
         service_totals[key] = service_totals.get(key, 0) + 1
 
+    top_service_key = max(service_totals.items(), key=lambda item: item[1])[0] if service_totals else None
+    top_service = service_map.get(top_service_key, top_service_key) if top_service_key else 'N/A'
+
     stopwords = {
         'the', 'a', 'an', 'is', 'was', 'and', 'to', 'of', 'it', 'in', 'on',
         'for', 'with', 'this', 'that', 'i', 'my', 'we', 'our', 'not', 'very',
@@ -634,12 +724,17 @@ def build_ai_insights(records):
                 if word not in stopwords and len(word) > 2:
                     word_counts[word] = word_counts.get(word, 0) + 1
 
+    main_complaint = max(word_counts.items(), key=lambda item: item[1])[0] if word_counts else 'None'
+
     recommendation = (
         f"Based on {len(records)} visible feedback records, continue monitoring "
+        f"'{top_service}' and follow up on recurring negative feedback."
     )
 
     return {
         'satisfaction': f"{satisfaction_pct}%",
+        'top_service': top_service,
+        'main_complaint': main_complaint,
         'recommendation': recommendation
     }
 
@@ -875,7 +970,12 @@ def generate_pdf_report(records):
 # ----------------------------------------------------
 @app.route('/sw.js')
 def service_worker():
-    return app.send_static_file('sw.js')
+    response = app.send_static_file('sw.js')
+    # A service worker file must be served from the site root with this
+    # header, or the browser will refuse to let it control the whole
+    # site (it would only control /static/*).
+    response.headers['Service-Worker-Allowed'] = '/'
+    return response
 
 
 # ----------------------------------------------------
@@ -904,10 +1004,17 @@ def services():
 def feedback():
     lang = request.args.get('lang', 'am')
     service = request.args.get('service', 'police_clearance')
+    # FIX: sub_service and custom_service were being read by the browser's
+    # URL but never handed to the template, so feedback.html had no way
+    # to know an "unlisted service" request was in progress or what the
+    # citizen had typed. Both are now passed through explicitly.
+    sub_service = request.args.get('sub_service', '')
+    custom_service = request.args.get('custom_service', '')
     service_map = get_service_map()
     sub_service_map = get_sub_service_map()
     return render_template(
         'feedback.html', lang=lang, service=service,
+        sub_service=sub_service, custom_service=custom_service,
         service_map=service_map, sub_service_map=sub_service_map
     )
 
@@ -1048,9 +1155,9 @@ def submit_feedback():
 
             raw_service = data.get('service') or data.get('category') or data.get('service_name', '')
             unlisted_service_text = (
-                data.get('unlisted_service') or 
-                data.get('custom_service') or 
-                data.get('custom_request') or 
+                data.get('unlisted_service') or
+                data.get('custom_service') or
+                data.get('custom_request') or
                 ''
             ).strip()
             rating = data.get('rating', '😊')
@@ -1060,9 +1167,9 @@ def submit_feedback():
         else:
             raw_service = request.form.get('service') or request.form.get('category') or request.form.get('service_name', '')
             unlisted_service_text = (
-                request.form.get('unlisted_service') or 
-                request.form.get('custom_service') or 
-                request.form.get('custom_request') or 
+                request.form.get('unlisted_service') or
+                request.form.get('custom_service') or
+                request.form.get('custom_request') or
                 ''
             ).strip()
             rating = request.form.get('rating', '😊')
@@ -1123,7 +1230,7 @@ def submit_feedback():
                 "message": exact_user_message,
                 "count": f"({session['feedback_count']}/3 submitted)"
             })
-        
+
         return redirect(url_for('thank_you_page') if 'thank_you_page' in globals() else url_for('admin_dashboard'))
 
     except Exception as e:
@@ -1132,7 +1239,6 @@ def submit_feedback():
         if request.content_type and 'application/json' in request.content_type:
             return jsonify({"status": "error", "message": str(e)}), 500
         return f"Database Error: {str(e)}", 500
-
 
 
 @app.route('/admin/notifications')
@@ -1179,6 +1285,7 @@ def admin_notifications():
         sub_service_map=sub_service_map
     )
 
+
 @app.route('/api/unread-count')
 def api_unread_count():
     try:
@@ -1186,6 +1293,8 @@ def api_unread_count():
     except Exception:
         unread_count = 0
     return jsonify({"unread_count": unread_count})
+
+
 @app.route('/api/comment', methods=['POST'])
 def post_comment():
     data = request.get_json()
@@ -1203,6 +1312,7 @@ def post_comment():
 
     # 2. Save clean comment to database...
     return jsonify({"success": "Comment posted successfully!"}), 200
+
 
 @app.route('/api/notifications/unread-count')
 def api_notifications_unread_count():
@@ -1235,7 +1345,6 @@ def admin_login():
     admin_credentials = get_admin_credentials()
     if request.method == 'POST':
         username = request.form.get('username')
-        password = request.form.get('password')
         password = request.form.get('password')
         if username in admin_credentials and password and (admin_credentials[username]['password'] == password or password == "1234"):
             session['admin_user'] = username
@@ -1321,6 +1430,7 @@ def admin_dashboard():
         unread_notifications_count=unread_notifications_count
     )
 
+
 @app.route('/admin/unlisted-services', methods=['GET', 'POST'])
 def manage_unlisted_services():
     logged_in_admin = session.get('admin_user')
@@ -1360,6 +1470,7 @@ def manage_unlisted_services():
 
     unlisted_requests = UnlistedServiceRequest.query.filter_by(status='Pending').all()
     return render_template('admin_unlisted.html', requests=unlisted_requests)
+
 
 @app.route('/admin/audit-logs')
 def admin_audit_logs():
@@ -1548,16 +1659,17 @@ def delete_feedback(fb_id):
         log_admin_action(logged_in_admin, f"Deleted feedback record #{fb_id}.")
 
     return redirect(url_for('admin_dashboard'))
+
+
 @app.route('/health')
 def health_check():
     return "OK", 200
 
 
 if __name__ == '__main__':
-    print("[startup] PostgreSQL database: federal_police_feedback")
-    print("[startup] PostgreSQL host: localhost | port: 5432 | user: postgres")
+    print("[startup] PostgreSQL database configured via DATABASE_URL")
     app.run(
-        debug=True,
+        debug=os.getenv('FLASK_DEBUG', '0') == '1',
         host='0.0.0.0',
         port=int(os.getenv('PORT', '5000'))
     )

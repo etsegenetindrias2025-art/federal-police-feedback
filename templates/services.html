@@ -127,15 +127,23 @@
                 </div>
             </div>
 
-            <!-- Custom Service Request Box with name="unlisted_service" mapped correctly -->
+            <!-- Custom Service Request Box -->
             <div id="custom-request-box" class="mt-6 p-5 rounded-2xl border border-amber-500/30 bg-slate-900/60 backdrop-blur-md">
                 <h4 class="text-sm font-bold text-amber-400 mb-2">Did you not find the service you need?</h4>
                 <p class="text-xs opacity-75 mb-3">If you did not get the service you are looking for from the list above, please write the service or request you need here.</p>
 
-                <textarea id="customServiceInput" name="unlisted_service" rows="3" placeholder="Write the service or request you need here..." class="w-full bg-slate-950/80 border border-amber-500/40 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-amber-400 resize-none"></textarea>
+                <div class="mb-4">
+                    <textarea id="customServiceInput" rows="4" class="w-full bg-slate-950/80 border border-amber-500/40 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-amber-400 resize-none" placeholder="Please write the service or request you need here..."></textarea>
+                </div>
+
+                <!-- Success Alert Box -->
+                <div id="success-alert" class="hidden mt-3 p-3.5 rounded-xl bg-emerald-500/20 border border-emerald-500 text-emerald-300 text-xs font-bold text-center flex items-center justify-center space-x-2 shadow-lg transition-all duration-500">
+                    <i class="fa-solid fa-circle-check text-base"></i>
+                    <span id="success-msg-text">መልእክቱ ተልኳል! አገልግሎቱን ስለተጠቀሙ እናመሰግናለን።</span>
+                </div>
 
                 <div class="mt-3 text-right">
-                    <button onclick="submitCustomServiceRequest()" class="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-bold px-6 py-2 rounded-xl text-xs shadow-lg transition-all duration-300">
+                    <button type="button" onclick="submitCustomServiceRequest()" class="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-bold px-6 py-2 rounded-xl text-xs shadow-lg transition-all duration-300 cursor-pointer">
                         Submit Request
                     </button>
                 </div>
@@ -170,25 +178,50 @@
         <div class="text-xs opacity-60 tracking-wider uppercase font-medium">Federal Police Kiosk v4.5</div>
     </div>
 
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 transition-all duration-300 transform translate-y-20 opacity-0 pointer-events-none">
+        <div id="toast-message" class="bg-slate-900 border border-amber-500 text-white px-4 py-3 rounded-xl shadow-2xl text-xs font-bold"></div>
+    </div>
+
     <script>
         let departmentsData = {};
         let selectedCategoryKey = '';
         const urlParams = new URLSearchParams(window.location.search);
         const currentLang = urlParams.get('lang') || 'en';
 
+        const t = {
+            toastMsg: currentLang === 'am' ? 'መልእክቱ በተሳካ ሁኔታ ተልኳል!' : 'Request submitted successfully!'
+        };
+
+        function showToast(message) {
+            const toast = document.getElementById('toast-container');
+            const msgEl = document.getElementById('toast-message');
+            msgEl.innerText = message;
+            toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+
         async function fetchDepartmentsFromPSQL() {
             try {
                 const response = await fetch('/api/departments');
                 if (!response.ok) throw new Error('Network response was not ok');
-                departmentsData = await response.json();
-                renderMainCategories();
+
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    departmentsData = await response.json();
+                    renderMainCategories();
+                } else {
+                    throw new TypeError("Received offline fallback HTML instead of JSON data.");
+                }
             } catch (error) {
-                console.error('Failed to load from PostgreSQL:', error);
+                console.warn('Failed to load from PostgreSQL or offline fallback triggered:', error);
                 document.getElementById('main-categories-container').innerHTML = `
-                    <div class="col-span-2 text-center py-6 text-red-400">
+                    <div class="col-span-2 text-center py-6 text-amber-400">
                         <i class="fa-solid fa-triangle-exclamation text-2xl mb-2"></i>
-                        <p class="text-sm font-bold">Could not load categories from PostgreSQL database.</p>
-                        <p class="text-xs opacity-70 mt-1">Check your Flask terminal for database connection logs.</p>
+                        <p class="text-sm font-bold">You are offline or the endpoint is unavailable.</p>
+                        <p class="text-xs opacity-70 mt-1">Please check your network connection or service worker setup.</p>
                     </div>
                 `;
             }
@@ -257,20 +290,6 @@
             document.getElementById('sub-services-view').classList.remove('hidden');
         }
 
-        function submitCustomServiceRequest() {
-            const input = document.getElementById('customServiceInput');
-            const requestText = input.value.trim();
-
-            if (!requestText) {
-                alert('Please write the service or request you need.');
-                input.focus();
-                return;
-            }
-
-            const service = selectedCategoryKey || 'other';
-            window.location.href = `/feedback?service=${encodeURIComponent(service)}&sub_service=custom_request&custom_service=${encodeURIComponent(requestText)}&lang=${encodeURIComponent(currentLang)}`;
-        }
-
         function backToCategories() {
             document.getElementById('sub-services-view').classList.add('hidden');
             document.getElementById('main-categories-view').classList.remove('hidden');
@@ -298,6 +317,51 @@
             } else {
                 window.history.back();
             }
+        }
+
+        function submitCustomServiceRequest() {
+            const reqText = document.getElementById('customServiceInput').value.trim();
+            const successAlert = document.getElementById('success-alert');
+
+            if (!reqText) {
+                const emptyMsg = currentLang === 'am' ? 'እባክዎ መጀመሪያ የሚፈልጉትን ጥያቄ ወይም አገልግሎት ይጻፉ።' : 'Please enter your request or comment first.';
+                showToast(emptyMsg);
+                return;
+            }
+
+            fetch('/submit-feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    service: 'additional_request', 
+                    sub_service: 'unlisted_comment', 
+                    rating: '😊', 
+                    comment: reqText,            // Passes the typed comment text
+                    unlisted_service: reqText,   // Passes it as unlisted service text too
+                    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    successAlert.classList.remove('hidden');
+                    showToast(t.toastMsg);
+                    document.getElementById('customServiceInput').value = '';
+
+                    setTimeout(() => {
+                        successAlert.classList.add('hidden');
+                        // Redirect directly to view it in the admin dashboard
+                        window.location.href = '/admin/dashboard?service=additional_request';
+                    }, 1500);
+                } else {
+                    showToast(data.message || 'ስህተት ተፈጥሯል።');
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                showToast(t.toastMsg);
+                document.getElementById('customServiceInput').value = '';
+            });
         }
 
         fetchDepartmentsFromPSQL();

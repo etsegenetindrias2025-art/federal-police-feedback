@@ -5,6 +5,7 @@
             <tr>
                 <th>ID</th>
                 <th>Requested Service / Text</th>
+                <th>Comment</th>
                 <th>Date Submitted</th>
                 <th>Action</th>
             </tr>
@@ -14,7 +15,8 @@
             <tr>
                 <td>#{{ req.id }}</td>
                 <td>{{ req.service_name }}</td>
-                <td>{{ req.date_submitted }}</td>
+                <td>{{ req.comment if req.comment else 'No comment provided' }}</td>
+                <td>{{ req.submission_date }}</td>
                 <td>
                     <form action="{{ url_for('manage_unlisted_services') }}" method="POST" class="d-inline">
                         <input type="hidden" name="request_id" value="{{ req.id }}">
@@ -33,7 +35,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="4" class="text-center">No pending unlisted service requests.</td>
+                <td colspan="5" class="text-center">No pending unlisted service requests.</td>
             </tr>
             {% endfor %}
         </tbody>
