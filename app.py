@@ -58,13 +58,13 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", "YOUR_OPENAI_API_KEY"))
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 LOCAL_SQLITE_PATH = os.path.join(BASE_DIR, "local_dev.db")
 
-# Cache directory for AI-generated voice-guide audio, using /tmp for Vercel
-if os.environ.get('VERCEL'):
-    TTS_CACHE_DIR = '/tmp/tts_cache'
-else:
-    TTS_CACHE_DIR = os.path.join(BASE_DIR, "tts_cache")
-
-os.makedirs(TTS_CACHE_DIR, exist_ok=True)
+# Bulletproof TTS cache directory setup for Vercel read-only filesystem
+TTS_CACHE_DIR = os.path.join(BASE_DIR, "tts_cache")
+try:
+    os.makedirs(TTS_CACHE_DIR, exist_ok=True)
+except OSError:
+    TTS_CACHE_DIR = "/tmp/tts_cache"
+    os.makedirs(TTS_CACHE_DIR, exist_ok=True)
 
 
 def _postgres_is_reachable(url, timeout=3):
@@ -77,7 +77,9 @@ def _postgres_is_reachable(url, timeout=3):
         return False
 
 
+# Single clean initialization
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{LOCAL_SQLITE_PATH}")
+
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
