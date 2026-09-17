@@ -15,6 +15,9 @@
             color: #c5a059;
             margin-bottom: 20px;
         }
+        .success-icon.limit {
+            color: #d97706;
+        }
         .thank-you-container h2 {
             color: #0d1b2a;
             margin-bottom: 15px;
@@ -35,9 +38,15 @@
 
     <div class="container">
         <div class="card thank-you-container">
-            <div class="success-icon">✓</div>
-            <h2>Thank You For Your Feedback!</h2>
-            <p>Your submission has been successfully received. We appreciate you helping us improve our public safety and citizen services.</p>
+            {% if message == 'limit' %}
+                <div class="success-icon limit">&#9200;</div>
+                <h2>You've Reached Your Limit</h2>
+                <p>You've submitted the maximum of 3 pieces of feedback for this session. ለአሁኑ የተፈቀደልዎትን 3 አስተያየቶች ጨርሰዋል።</p>
+            {% else %}
+                <div class="success-icon">&#10003;</div>
+                <h2>Thank You For Your Feedback!</h2>
+                <p>Your submission has been successfully received. We appreciate you helping us improve our public safety and citizen services.</p>
+            {% endif %}
             <a href="/" class="btn btn-gold">Return to Home</a>
         </div>
     </div>

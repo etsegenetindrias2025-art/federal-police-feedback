@@ -303,6 +303,79 @@
             return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
         }
 
+        // Tries to recognize a fingerprint that's already enrolled on this
+        // kiosk. Only succeeds if the physical finger on the sensor matches
+        // one of the credential ids the platform authenticator was given
+        // via allowCredentials -- so a "success" here means a returning
+        // citizen, not a new one. Returns the /api/fingerprint/authenticate
+        // response on success, or null if nothing matched (new person, or
+        // nothing enrolled yet).
+        async function tryAuthenticate(chal) {
+            if (!chal.knownCredentialIds || chal.knownCredentialIds.length === 0) {
+                return null;
+            }
+            try {
+                const assertion = await navigator.credentials.get({
+                    publicKey: {
+                        challenge: b64urlToBuf(chal.challenge),
+                        allowCredentials: chal.knownCredentialIds.map(id => ({
+                            id: b64urlToBuf(id),
+                            type: 'public-key'
+                        })),
+                        userVerification: 'required',
+                        timeout: 30000
+                    }
+                });
+
+                const res = await fetch('/api/fingerprint/authenticate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        credentialId: bufToB64url(assertion.rawId),
+                        clientDataJSON: bufToB64url(assertion.response.clientDataJSON),
+                        authenticatorData: bufToB64url(assertion.response.authenticatorData)
+                    })
+                });
+                const result = await res.json();
+                return result.status === 'success' ? result : null;
+            } catch (err) {
+                // No matching credential for this finger (or the user
+                // cancelled) -- treat as "new person", not an error.
+                return null;
+            }
+        }
+
+        // Enrolls a brand-new fingerprint. Only reached when tryAuthenticate()
+        // above found no match, i.e. this kiosk hasn't seen this finger before.
+        async function registerFingerprint(chal) {
+            const credential = await navigator.credentials.create({
+                publicKey: {
+                    challenge: b64urlToBuf(chal.challenge),
+                    rp: { name: chal.rpName, id: chal.rpId },
+                    user: {
+                        id: crypto.getRandomValues(new Uint8Array(16)),
+                        name: 'kiosk-guest',
+                        displayName: 'Kiosk Guest'
+                    },
+                    pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+                    authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+                    timeout: 60000,
+                    attestation: 'none'
+                }
+            });
+
+            const res = await fetch('/api/fingerprint/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    credentialId: bufToB64url(credential.rawId),
+                    clientDataJSON: bufToB64url(credential.response.clientDataJSON),
+                    authenticatorData: bufToB64url(credential.response.getAuthenticatorData())
+                })
+            });
+            return res.json();
+        }
+
         async function scanFingerprint() {
             const scannerBox = document.getElementById('scannerBox');
             scannerBox.classList.add('scanning');
@@ -313,36 +386,32 @@
                     return;
                 }
 
-                const chal = await (await fetch('/api/fingerprint/challenge')).json();
+                // Step 1: get a challenge + the fingerprints already
+                // enrolled on this kiosk, and try to recognize this finger.
+                let chal = await (await fetch('/api/fingerprint/challenge')).json();
+                let result = await tryAuthenticate(chal);
 
-                const credential = await navigator.credentials.create({
-                    publicKey: {
-                        challenge: b64urlToBuf(chal.challenge),
-                        rp: { name: chal.rpName, id: chal.rpId },
-                        user: {
-                            id: crypto.getRandomValues(new Uint8Array(16)),
-                            name: 'kiosk-guest',
-                            displayName: 'Kiosk Guest'
-                        },
-                        pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
-                        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
-                        timeout: 60000,
-                        attestation: 'none'
-                    }
-                });
+                // Step 2: no match -- this is a new person. The challenge
+                // was one-time-use, so fetch a fresh one before registering.
+                if (!result) {
+                    chal = await (await fetch('/api/fingerprint/challenge')).json();
+                    result = await registerFingerprint(chal);
+                }
 
-                const res = await fetch('/api/fingerprint/scan', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        clientDataJSON: bufToB64url(credential.response.clientDataJSON),
-                        authenticatorData: bufToB64url(credential.response.getAuthenticatorData())
-                    })
-                });
-                const result = await res.json();
+                if (result.status !== 'success') {
+                    alert(result.message || 'Verification failed. Please try again.');
+                    return;
+                }
 
-                if (result.status === 'success') window.location.href = '/welcome';
-                else alert(result.message || 'Verification failed. Please try again.');
+                if (result.alreadySubmittedToday) {
+                    // Recognized, but this finger has already given feedback
+                    // today -- send them to the "come back tomorrow" screen
+                    // instead of into the feedback flow.
+                    window.location.href = '/thank-you?message=limit';
+                    return;
+                }
+
+                window.location.href = '/welcome';
             } catch (err) {
                 console.error(err);
                 alert('Fingerprint scan cancelled or failed.');

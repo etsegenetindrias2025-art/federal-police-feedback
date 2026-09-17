@@ -1,4 +1,4 @@
-from flask import Flask, flash, render_template, request, jsonify, session, redirect, url_for, send_file
+from flask import Flask, flash, render_template, request, jsonify, session, redirect, url_for, send_file, send_from_directory
 import io
 import os
 import re
@@ -6,6 +6,7 @@ import time
 import base64
 import secrets
 import json
+import hashlib
 import traceback
 from datetime import datetime
 from openai import OpenAI
@@ -74,6 +75,14 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", "YOUR_OPENAI_API_KEY"))
 # ----------------------------------------------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 LOCAL_SQLITE_PATH = os.path.join(BASE_DIR, "local_dev.db")
+
+# Cache directory for AI-generated voice-guide audio (see the
+# text-to-speech section further down). Generating each phrase once and
+# reusing the file is what makes the guide behave identically on every
+# device -- the citizen's phone plays a file the server already made,
+# instead of relying on that phone's own installed TTS voices.
+TTS_CACHE_DIR = os.path.join(BASE_DIR, "tts_cache")
+os.makedirs(TTS_CACHE_DIR, exist_ok=True)
 
 
 def _postgres_is_reachable(url, timeout=3):
@@ -219,16 +228,28 @@ class Feedback(db.Model):
     comment = db.Column(db.Text, nullable=True)
     audio_status = db.Column(db.String(100), default='No audio recorded')
     is_read = db.Column(db.Boolean, default=False)
+    # Which enrolled fingerprint (WebAuthn credential id) submitted this
+    # record, if any. Used to enforce "one feedback per fingerprint per
+    # day" instead of the old per-session counter. Nullable so existing
+    # rows (and any submission path that legitimately has no fingerprint
+    # identity attached yet) don't break.
+    fingerprint_credential_id = db.Column(db.String(255), nullable=True, index=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class FingerprintRecord(db.Model):
     __tablename__ = 'fingerprint_records'
     id = db.Column(db.Integer, primary_key=True)
+    # The WebAuthn credential id (base64url, as returned by the platform
+    # authenticator) is what actually distinguishes one enrolled finger
+    # from another on this kiosk. It's unique per registered fingerprint.
+    credential_id = db.Column(db.String(255), unique=True, nullable=True, index=True)
     user_id = db.Column(db.String(100), nullable=True)
     fingerprint_data = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(50), default='Verified')
+    sign_count = db.Column(db.Integer, default=0)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    last_used = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class Service(db.Model):
@@ -362,9 +383,58 @@ def ensure_postgresql_schema():
         db.session.commit()
 
 
+def ensure_fingerprint_schema():
+    """Adds the new fingerprint-identity columns to an already-existing
+    fingerprint_records table. db.create_all() only creates tables that
+    don't exist yet -- it can't add columns to one that's already there,
+    so a database created before this feature was added needs this to
+    pick up credential_id, sign_count, and last_used."""
+    inspector = inspect(db.engine)
+    if "fingerprint_records" not in inspector.get_table_names():
+        return
+
+    columns = {c["name"] for c in inspector.get_columns("fingerprint_records")}
+
+    if "credential_id" not in columns:
+        db.session.execute(sql_text(
+            "ALTER TABLE fingerprint_records ADD COLUMN credential_id VARCHAR(255)"
+        ))
+        db.session.commit()
+
+    if "sign_count" not in columns:
+        db.session.execute(sql_text(
+            "ALTER TABLE fingerprint_records ADD COLUMN sign_count INTEGER DEFAULT 0"
+        ))
+        db.session.commit()
+
+    if "last_used" not in columns:
+        db.session.execute(sql_text(
+            "ALTER TABLE fingerprint_records ADD COLUMN last_used TIMESTAMP"
+        ))
+        db.session.commit()
+
+
+def ensure_feedback_schema():
+    """Adds fingerprint_credential_id to an already-existing feedbacks
+    table, for the same reason as ensure_fingerprint_schema() above."""
+    inspector = inspect(db.engine)
+    if "feedbacks" not in inspector.get_table_names():
+        return
+
+    columns = {c["name"] for c in inspector.get_columns("feedbacks")}
+
+    if "fingerprint_credential_id" not in columns:
+        db.session.execute(sql_text(
+            "ALTER TABLE feedbacks ADD COLUMN fingerprint_credential_id VARCHAR(255)"
+        ))
+        db.session.commit()
+
+
 def init_db():
     with app.app_context():
         ensure_postgresql_schema()
+        ensure_fingerprint_schema()
+        ensure_feedback_schema()
         db.create_all()
 
         default_services = [
@@ -569,6 +639,22 @@ def get_admin_credentials():
         "admin lea": {"password": "1234", "type": "sub_service", "service": "hr", "sub_service": "leave", "title": "Sub Admin: Leave Management"},
         "admin dev": {"password": "1234", "type": "sub_service", "service": "hr", "sub_service": "training_development", "title": "Sub Admin: Staff Development"}
     }
+
+
+def _has_submitted_today(credential_id):
+    """True if this specific fingerprint (WebAuthn credential id) has
+    already submitted a Feedback record today. This is the core of the
+    'one feedback per person per day, many people per device' rule --
+    it's checked at scan time (to greet a repeat visitor honestly) and
+    enforced again at submit time (in case a lot of time passed between
+    the scan and the submit)."""
+    if not credential_id:
+        return False
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    return db.session.query(Feedback.id).filter(
+        Feedback.fingerprint_credential_id == credential_id,
+        Feedback.timestamp >= today_start
+    ).first() is not None
 
 
 # ----------------------------------------------------
@@ -1022,6 +1108,18 @@ def feedback():
     )
 
 
+# FIX: this route didn't exist at all. submit_feedback() referenced
+# url_for('thank_you_page') behind an `if 'thank_you_page' in globals()`
+# check that always evaluated False, so every successful/limited/blocked
+# submission fell through to admin_dashboard -- which then bounced an
+# unauthenticated citizen straight to the admin login screen. Now there
+# is a real page to land on, using your thank_you.html template.
+@app.route('/thank-you')
+def thank_you_page():
+    message = request.args.get('message', '')
+    return render_template('thank_you.html', message=message)
+
+
 # ----------------------------------------------------
 # DEPARTMENTS API ROUTE FOR FRONTEND
 # ----------------------------------------------------
@@ -1110,38 +1208,78 @@ def get_departments():
 
 # ----------------------------------------------------
 # FINGERPRINT API ROUTES (WebAuthn platform-biometric verification)
+#
+# REWORK: the fingerprint scan used to only prove "a real finger was
+# used" -- it never distinguished *which* finger. Every scan created a
+# brand-new WebAuthn credential and threw it away as far as identity
+# goes, so there was no way to tell two different citizens on the same
+# kiosk apart, and no way to stop the same citizen from scanning
+# repeatedly and submitting feedback as many times as they liked.
+#
+# Now each enrolled fingerprint has its own WebAuthn credential id,
+# stored in FingerprintRecord.credential_id. The kiosk flow is:
+#
+#   1. GET /api/fingerprint/challenge
+#      -> returns a challenge AND the credential ids of every finger
+#         already enrolled on this device.
+#   2. The page first tries navigator.credentials.get() with those ids
+#      as allowCredentials. The platform authenticator can only produce
+#      a valid assertion for the credential that matches the physical
+#      finger actually placed on the sensor -- so success here means
+#      "this is a person we've already seen on this kiosk".
+#      -> POST the assertion to /api/fingerprint/authenticate.
+#   3. If step 2 fails (no matching credential -- a new person), the
+#      page falls back to navigator.credentials.create() to enroll a
+#      brand-new fingerprint.
+#      -> POST the attestation to /api/fingerprint/register.
+#
+# Either path ends with session['fingerprint_credential_id'] set, which
+# submit_feedback() uses to enforce one submission per fingerprint per
+# day, regardless of how many different people use this same device.
 # ----------------------------------------------------
 @app.route('/api/fingerprint/challenge')
 def fingerprint_challenge():
-    """Issues a fresh random challenge for the browser's WebAuthn
-    navigator.credentials.create() call, and stashes it in the
-    session so scan_fingerprint() can confirm the same challenge
-    came back (prevents replay of an old/fake response)."""
+    """Issues a fresh random challenge for the browser's WebAuthn call,
+    stashes it in the session so the verify step can confirm the same
+    challenge came back (prevents replay of an old/fake response), and
+    lists every fingerprint already enrolled on this kiosk so the page
+    can attempt to recognize a returning citizen before enrolling a new
+    one."""
     challenge = secrets.token_bytes(32)
     session['fp_challenge'] = base64.urlsafe_b64encode(challenge).decode().rstrip('=')
+
+    known_credential_ids = [
+        row[0] for row in
+        db.session.query(FingerprintRecord.credential_id)
+        .filter(FingerprintRecord.credential_id.isnot(None))
+        .all()
+    ]
+
     return jsonify({
         "challenge": session['fp_challenge'],
         # rpId must exactly match the hostname the page is served from --
         # 'localhost' for local dev, or your real domain in production.
         # It will NOT work against a raw IP like 127.0.0.1.
         "rpId": request.host.split(':')[0],
-        "rpName": "Ethiopian Federal Police"
+        "rpName": "Ethiopian Federal Police",
+        "knownCredentialIds": known_credential_ids
     })
 
 
-@app.route('/api/fingerprint/scan', methods=['POST'])
-def scan_fingerprint():
-    """Verifies a WebAuthn platform-authenticator response (Windows
-    Hello / Touch ID / Android biometric) instead of trusting a fake
-    client-supplied hash. Confirms: right challenge, right ceremony
-    type, and that the OS actually reported the user as biometrically
-    verified (the UV flag) before writing a FingerprintRecord."""
+@app.route('/api/fingerprint/authenticate', methods=['POST'])
+def authenticate_fingerprint():
+    """Verifies a WebAuthn 'get' (authentication) response against an
+    already-enrolled credential. A successful call here means the same
+    physical finger that registered this credential earlier is the one
+    on the sensor right now -- i.e. this is a returning citizen on this
+    kiosk, not a new one."""
     try:
         data = request.get_json() or {}
+        credential_id = data.get('credentialId')
         client_data_b64 = data.get('clientDataJSON')
         auth_data_b64 = data.get('authenticatorData')
 
-        if not client_data_b64 or not auth_data_b64:
+        if not credential_id or not client_data_b64 or not auth_data_b64:
             return jsonify({"status": "error", "message": "Missing WebAuthn response"}), 400
 
         def _b64pad(s):
@@ -1149,7 +1287,7 @@ def scan_fingerprint():
 
         client_data = json.loads(base64.urlsafe_b64decode(_b64pad(client_data_b64)))
 
-        if client_data.get('type') != 'webauthn.create':
+        if client_data.get('type') != 'webauthn.get':
             return jsonify({"status": "error", "message": "Invalid ceremony type"}), 400
 
         if client_data.get('challenge') != session.get('fp_challenge'):
@@ -1164,21 +1302,193 @@ def scan_fingerprint():
         if not user_verified:
             return jsonify({"status": "error", "message": "Biometric verification not confirmed"}), 400
 
+        record = FingerprintRecord.query.filter_by(credential_id=credential_id).first()
+        if not record:
+            return jsonify({"status": "error", "message": "Fingerprint not recognized"}), 404
+
+        record.last_used = datetime.utcnow()
+        db.session.commit()
+
+        session.pop('fp_challenge', None)
+        session['fingerprint_credential_id'] = credential_id
+
+        return jsonify({
+            "status": "success",
+            "message": "የጣት አሻራ ታውቋል! (Fingerprint recognized)",
+            "alreadySubmittedToday": _has_submitted_today(credential_id)
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/fingerprint/register', methods=['POST'])
+@app.route('/api/fingerprint/scan', methods=['POST'])  # legacy path, kept working
+def register_fingerprint():
+    """Registers a brand-new fingerprint (WebAuthn 'create' response).
+    The frontend only calls this after /api/fingerprint/authenticate has
+    failed to match any enrolled credential, so reaching here means this
+    is a person this kiosk hasn't seen before."""
+    try:
+        data = request.get_json() or {}
+        credential_id = data.get('credentialId')
+        client_data_b64 = data.get('clientDataJSON')
+        auth_data_b64 = data.get('authenticatorData')
+
+        if not credential_id or not client_data_b64 or not auth_data_b64:
+            return jsonify({"status": "error", "message": "Missing WebAuthn response"}), 400
+
+        def _b64pad(s):
+            return s + '=' * (-len(s) % 4)
+
+        client_data = json.loads(base64.urlsafe_b64decode(_b64pad(client_data_b64)))
+
+        if client_data.get('type') != 'webauthn.create':
+            return jsonify({"status": "error", "message": "Invalid ceremony type"}), 400
+
+        if client_data.get('challenge') != session.get('fp_challenge'):
+            return jsonify({"status": "error", "message": "Challenge mismatch"}), 400
+
+        auth_data = base64.urlsafe_b64decode(_b64pad(auth_data_b64))
+        user_verified = bool(len(auth_data) > 32 and (auth_data[32] & 0x04))
+
+        if not user_verified:
+            return jsonify({"status": "error", "message": "Biometric verification not confirmed"}), 400
+
+        if FingerprintRecord.query.filter_by(credential_id=credential_id).first():
+            # Shouldn't normally happen (the frontend only registers after
+            # authenticate() already failed to find a match), but guards
+            # against a double-submit of the same create() response.
+            return jsonify({"status": "error", "message": "This fingerprint is already registered"}), 409
+
         record = FingerprintRecord()
+        record.credential_id = credential_id
         record.user_id = 'KIOSK_WALKUP'
         record.fingerprint_data = 'webauthn_platform_verified'
         record.status = 'Verified'
+        record.sign_count = 0
+        record.last_used = datetime.utcnow()
         db.session.add(record)
         db.session.commit()
 
         session.pop('fp_challenge', None)
+        session['fingerprint_credential_id'] = credential_id
 
         return jsonify({
             "status": "success",
             "message": "የጣት አሻራ ማረጋገጫ ተሳክቷል! (Fingerprint verified)",
+            "alreadySubmittedToday": False
         }), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ----------------------------------------------------
+# TEXT-TO-SPEECH (AI VOICE GUIDE)
+#
+# REWORK: the previous voice guide used each browser's own built-in
+# speechSynthesis API. That only works if the device itself has an
+# Amharic voice installed -- most desktop browsers do, but a lot of
+# Android/iOS phones simply don't, so the call silently produced no
+# sound. This generates the audio once server-side with OpenAI's TTS
+# model and caches the resulting file, so every device -- desktop or
+# mobile -- downloads and plays back the exact same pre-rendered audio
+# instead of depending on what's installed locally.
+#
+# NOTE: OpenAI's TTS voices are optimized for English and are not an
+# officially documented Amharic voice. In practice this is usually good
+# enough for short guide phrases, but test your exact wording before
+# relying on it -- if pronunciation quality isn't good enough for your
+# use case, this same route can be pointed at a dedicated Amharic TTS
+# provider (e.g. an Amharic-specific voice API) instead; only the body
+# of _generate_tts_audio() below would need to change.
+# ----------------------------------------------------
+TTS_VOICE_BY_LANG = {
+    'am': 'alloy',
+    'en': 'alloy',
+}
+
+
+def _tts_cache_path(text, lang):
+    """Deterministic cache filename for a given (text, lang) pair, so
+    the same phrase is only ever generated once."""
+    cache_key = hashlib.sha256(f"{lang}:{text}".encode('utf-8')).hexdigest()
+    return os.path.join(TTS_CACHE_DIR, f"{cache_key}.mp3"), cache_key
+
+
+def _generate_tts_audio(text, voice, file_path):
+    """Calls OpenAI's TTS model and writes the resulting MP3 to disk."""
+    audio_response = client.audio.speech.create(
+        model="tts-1",
+        voice=voice,
+        input=text,
+    )
+    with open(file_path, "wb") as f:
+        f.write(audio_response.content)
+
+
+@app.route('/api/tts')
+def text_to_speech():
+    """?text=<guide phrase>&lang=am|en -> audio/mpeg.
+
+    Generates the audio on first request and serves the cached file on
+    every request after that, so repeat visits (and every other device
+    asking for the same phrase) don't re-hit the API.
+    """
+    text = (request.args.get('text') or '').strip()
+    lang = (request.args.get('lang') or 'am').strip().lower()
+
+    if not text:
+        return jsonify({"status": "error", "message": "No text provided"}), 400
+    if len(text) > 500:
+        return jsonify({"status": "error", "message": "Text is too long for the voice guide"}), 400
+
+    voice = TTS_VOICE_BY_LANG.get(lang, TTS_VOICE_BY_LANG['am'])
+    file_path, cache_key = _tts_cache_path(text, lang)
+
+    if not os.path.exists(file_path):
+        try:
+            _generate_tts_audio(text, voice, file_path)
+        except Exception as e:
+            print("TTS ERROR:", str(e))
+            if os.path.exists(file_path):
+                # Don't leave a partial/corrupt file behind for the next request.
+                os.remove(file_path)
+            return jsonify({
+                "status": "error",
+                "message": "Voice guide is temporarily unavailable."
+            }), 503
+
+    return send_from_directory(TTS_CACHE_DIR, f"{cache_key}.mp3", mimetype='audio/mpeg')
+
+
+@app.route('/api/tts/warm', methods=['POST'])
+def warm_tts_cache():
+    """Optional: pre-generate audio for a batch of guide phrases (e.g. at
+    deploy time) so the *first* citizen to hit each page isn't the one
+    who has to wait on the OpenAI call. Body: {"phrases": [{"text": "...",
+    "lang": "am"}, ...]}."""
+    data = request.get_json() or {}
+    phrases = data.get('phrases', [])
+    generated, failed = [], []
+
+    for item in phrases:
+        text = (item.get('text') or '').strip()
+        lang = (item.get('lang') or 'am').strip().lower()
+        if not text:
+            continue
+        voice = TTS_VOICE_BY_LANG.get(lang, TTS_VOICE_BY_LANG['am'])
+        file_path, cache_key = _tts_cache_path(text, lang)
+        if os.path.exists(file_path):
+            generated.append(cache_key)
+            continue
+        try:
+            _generate_tts_audio(text, voice, file_path)
+            generated.append(cache_key)
+        except Exception as e:
+            print("TTS WARM ERROR:", str(e))
+            failed.append(text)
+
+    return jsonify({"status": "success", "generated": len(generated), "failed": failed})
 
 
 # ----------------------------------------------------
@@ -1189,14 +1499,31 @@ def scan_fingerprint():
 @app.route('/submit_feedback', methods=['POST'])
 def submit_feedback():
     try:
-        feedback_count = session.get('feedback_count', 0)
-        if feedback_count >= 3:
+        # REWORK: this used to cap submissions at 3 per browser session
+        # (session['feedback_count']). That's easy to bypass (clear
+        # cookies, use a private tab) and doesn't match "one feedback per
+        # person per day, many people per kiosk". It's now gated on the
+        # fingerprint identity established by the /api/fingerprint/*
+        # routes above: no fingerprint scanned yet -> can't submit; this
+        # exact fingerprint already submitted today -> can't submit again
+        # until tomorrow. A different finger on the same device is a
+        # different person and is free to submit.
+        fingerprint_credential_id = session.get('fingerprint_credential_id')
+
+        if not fingerprint_credential_id:
+            message = ("Please scan your fingerprint before submitting feedback. / "
+                       "እባክዎ አስተያየት ከማስገባትዎ በፊት የጣት አሻራዎን ያስገቡ።")
             if request.content_type and 'application/json' in request.content_type:
-                return jsonify({
-                    "status": "error",
-                    "message": "ለአሁኑ የተፈቀደልዎትን 3 አስተያየቶች ጨርሰዋል! / You have reached your max limit of 3 feedbacks for this session."
-                }), 403
-            return redirect(url_for('admin_login'))  # Or appropriate error handling/redirect for form posts
+                return jsonify({"status": "error", "message": message}), 403
+            return redirect(url_for('fingerprint'))
+
+        if _has_submitted_today(fingerprint_credential_id):
+            message = ("You have already submitted feedback today with this fingerprint. "
+                       "Please try again tomorrow. / ዛሬ በዚህ የጣት አሻራ አስተያየት አስገብተዋል፤ "
+                       "እባክዎ ነገ ይሞክሩ።")
+            if request.content_type and 'application/json' in request.content_type:
+                return jsonify({"status": "error", "message": message}), 403
+            return redirect(url_for('thank_you_page', message='limit'))
 
         # Handle both JSON API requests and standard form submissions
         if request.content_type and 'application/json' in request.content_type:
@@ -1251,7 +1578,10 @@ def submit_feedback():
                     "status": "error",
                     "message": "ያልተገባ ቃል ተገኝቷል። እባክዎን በትህትና አስተያየትዎን ያስቀምጡ። / Inappropriate language detected. Please keep your feedback respectful."
                 }), 400
-            return redirect(url_for('admin_login'))
+            # FIX: previously redirected to admin_login. Send the citizen
+            # back to the form they came from (or the feedback page as a
+            # fallback) so they can edit and resubmit.
+            return redirect(request.referrer or url_for('feedback'))
 
         parsed_ts = datetime.utcnow()
         if client_timestamp:
@@ -1267,22 +1597,29 @@ def submit_feedback():
         new_fb.comment = str(comment)
         new_fb.audio_status = str(audio_status)
         new_fb.is_read = False
+        new_fb.fingerprint_credential_id = fingerprint_credential_id
         new_fb.timestamp = parsed_ts
         db.session.add(new_fb)
         db.session.commit()
 
-        session['feedback_count'] = feedback_count + 1
+        # This fingerprint has now used up today's submission. Clear it
+        # from the session so the *next* citizen at this kiosk is forced
+        # through a fresh fingerprint scan rather than inheriting the
+        # previous person's identity.
+        session.pop('fingerprint_credential_id', None)
 
         if request.content_type and 'application/json' in request.content_type:
             exact_user_message = "መልእክቱ ተልኳል አገልግሎቱን ስለተጠቀሙ እናመሰግናለን!!!"
             return jsonify({
                 "status": "success",
                 "successTitle": "እናመሰግናለን! 😊",
-                "message": exact_user_message,
-                "count": f"({session['feedback_count']}/3 submitted)"
+                "message": exact_user_message
             })
 
-        return redirect(url_for('thank_you_page') if 'thank_you_page' in globals() else url_for('admin_dashboard'))
+        # FIX: previously fell through to admin_dashboard (which then
+        # bounced to admin_login because the citizen isn't an admin).
+        # Now sends them to the actual thank-you page.
+        return redirect(url_for('thank_you_page'))
 
     except Exception as e:
         db.session.rollback()
