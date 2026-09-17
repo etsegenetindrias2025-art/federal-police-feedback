@@ -42,15 +42,6 @@ from reportlab.lib import colors
 import psycopg2
 import psycopg2.extras
 
-
-# ----------------------------------------------------
-# SINGLE FLASK APP + DATABASE INITIALIZATION
-#
-# FIX: the original file created `Flask(__name__)` twice. The second
-# call silently threw away everything set on the first instance,
-# including `app.config.from_object(Config)`. There must be exactly
-# ONE `Flask(__name__)` call, and every config line must apply to it.
-# ----------------------------------------------------
 app = Flask(__name__)
 app.config.from_object(Config)
 
@@ -63,25 +54,16 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", "YOUR_OPENAI_API_KEY"))
 # ----------------------------------------------------
 # DATABASE_URL: reachable cloud DB when you have it, automatic local
 # SQLite fallback when you don't.
-#
-# FIX: previously, if DATABASE_URL was set at all (e.g. loaded from a
-# .env file, which is the normal way to configure this) the app always
-# tried that database -- even with no internet -- and crashed. Now the
-# configured database is actively tested at startup. If it can't be
-# reached within a few seconds, the app automatically switches to a
-# local SQLite file for this run instead of dying. You don't have to
-# edit .env or unset anything to work offline; when you're back online
-# and DATABASE_URL is reachable again, it's used automatically too.
 # ----------------------------------------------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 LOCAL_SQLITE_PATH = os.path.join(BASE_DIR, "local_dev.db")
 
-# Cache directory for AI-generated voice-guide audio (see the
-# text-to-speech section further down). Generating each phrase once and
-# reusing the file is what makes the guide behave identically on every
-# device -- the citizen's phone plays a file the server already made,
-# instead of relying on that phone's own installed TTS voices.
-TTS_CACHE_DIR = os.path.join(BASE_DIR, "tts_cache")
+# Cache directory for AI-generated voice-guide audio, using /tmp for Vercel
+if os.environ.get('VERCEL'):
+    TTS_CACHE_DIR = '/tmp/tts_cache'
+else:
+    TTS_CACHE_DIR = os.path.join(BASE_DIR, "tts_cache")
+
 os.makedirs(TTS_CACHE_DIR, exist_ok=True)
 
 
@@ -96,7 +78,6 @@ def _postgres_is_reachable(url, timeout=3):
 
 
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{LOCAL_SQLITE_PATH}")
-
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
