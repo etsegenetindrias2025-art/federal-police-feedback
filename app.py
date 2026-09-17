@@ -1036,7 +1036,33 @@ def generate_pdf_report(records):
     buffer.seek(0)
     return buffer
 
-
+@app.route('/transcribe', methods=['POST'])
+def transcribe_audio():
+    """Endpoint to handle speech-to-text conversion using OpenAI Whisper API."""
+    if 'audio' not in request.files:
+        return jsonify({'error': 'No audio file provided'}), 400
+    
+    audio_file = request.files['audio']
+    
+    # Save the incoming audio temporarily in our Vercel-safe writable cache directory
+    temp_audio_path = os.path.join(TTS_CACHE_DIR, 'temp_recording.webm')
+    audio_file.save(temp_audio_path)
+    
+    try:
+        with open(temp_audio_path, 'rb') as f:
+            # Call OpenAI Whisper model for speech-to-text
+            transcript = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=f
+            )
+        return jsonify({'success': True, 'text': transcript.text})
+    except Exception as e:
+        print(f"[Transcription Error]: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        # Clean up the temp file
+        if os.path.exists(temp_audio_path):
+            os.remove(temp_audio_path)
 # ----------------------------------------------------
 # PROGRESSIVE WEB APP (PWA) OFFLINE ROUTE
 # ----------------------------------------------------
