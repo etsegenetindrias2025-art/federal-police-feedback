@@ -1,4 +1,4 @@
-from flask import Flask, flash, render_template, request, jsonify, session, redirect, url_for, send_file, send_from_directory
+from flask import Flask, flash, render_template, request, jsonify, session, redirect, url_for, send_file, send_from_directory, Response
 import io
 import os
 import re
@@ -24,14 +24,17 @@ from models import UnlistedServiceRequest, Feedback  # type: ignore
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.cell.cell import MergedCell
+from openpyxl.worksheet.hyperlink import Hyperlink
 
 # Word document imports
 import docx
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.oxml import parse_xml
-from docx.oxml.ns import nsdecls
+from docx.oxml import parse_xml, OxmlElement
+from docx.oxml.ns import nsdecls, qn
+from docx.opc.constants import RELATIONSHIP_TYPE as DOCX_RELATIONSHIP_TYPE
 
 # PDF generation imports (ReportLab)
 from reportlab.lib.pagesizes import letter, landscape
@@ -200,6 +203,142 @@ def is_inappropriate(text):
 
 
 # ----------------------------------------------------
+# AI TOXICITY / THREAT DETECTION
+#
+# is_inappropriate() above only catches words on a hardcoded list, so a
+# genuine threat like "I hate you and want to hurt you" sails straight
+# through it -- there's no profanity in that sentence, just intent to
+# harm. This runs the actual comment text through OpenAI's moderation
+# model, which is trained to recognize threats, hate speech, harassment,
+# and violent language regardless of wording. Any submission flagged
+# here is automatically blocked before it's saved, the citizen sees a
+# clear warning, and the attempt is logged to the admin audit trail so
+# staff can review it -- since on a police feedback system, a real
+# threat is something worth someone actually seeing, not just silently
+# discarding.
+# ----------------------------------------------------
+THREAT_CATEGORIES = {
+    "violence", "violence/graphic",
+    "harassment", "harassment/threatening",
+    "hate", "hate/threatening",
+    "self-harm", "self-harm/intent", "self-harm/instructions",
+}
+
+
+def check_content_safety(text):
+    """Runs OpenAI's moderation model over free-text feedback/comments.
+    Returns (is_flagged, flagged_categories). Fails OPEN (returns
+    "not flagged") if the moderation API itself is unreachable, so a
+    network hiccup or missing API key never blocks legitimate feedback
+    from being submitted -- the profanity list in is_inappropriate()
+    still runs regardless, as a baseline."""
+    if not text or not text.strip():
+        return False, []
+    try:
+        result = client.moderations.create(input=text)
+        output = result.results[0]
+        if not output.flagged:
+            return False, []
+        categories_dict = output.categories.model_dump() if hasattr(output.categories, 'model_dump') else dict(output.categories)
+        flagged_categories = [category for category, flagged in categories_dict.items() if flagged]
+        return True, flagged_categories
+    except Exception as e:
+        print("MODERATION API ERROR:", str(e))
+        return False, []
+
+
+def evaluate_comment_safety(comment):
+    """Single entry point used by every submission route that accepts
+    free text. Runs the fast local profanity check first, then the AI
+    moderation check. Returns (is_blocked, reason, flagged_categories)
+    where reason is 'profanity', 'moderation', or None."""
+    if is_inappropriate(comment):
+        return True, 'profanity', []
+
+    is_flagged, flagged_categories = check_content_safety(comment)
+    if is_flagged:
+        return True, 'moderation', flagged_categories
+
+    return False, None, []
+
+
+# ----------------------------------------------------
+# RATING NORMALIZATION (fixes the "□" tofu box in Excel/Word/PDF)
+#
+# The database ends up with a mix of raw emoji ('😊') and plain numbers
+# ('4') in the rating column depending on which version of the frontend
+# submitted the record. That's fine for the web dashboard (which has a
+# proper emoji font available in the browser), but openpyxl/python-docx/
+# reportlab generate their files with fonts that often don't ship a
+# color-emoji glyph, so the raw emoji character renders as an empty box
+# in Excel/Word/PDF viewers that don't have a matching font installed.
+#
+# The fix: always resolve a rating down to (number, emoji, label) and
+# write "4/5 😊 (Satisfied)" into reports. The number and label are
+# plain text and will always be legible; the emoji is included as a
+# best-effort extra (we also point the Rating column at "Segoe UI
+# Emoji" in Excel/Word so it renders where that font is available) but
+# whether it displays as a color glyph ultimately depends on fonts
+# installed in the viewer app (Excel/Word/Acrobat/etc.) -- that part is
+# outside what the generated file itself can force.
+# ----------------------------------------------------
+RATING_EMOJI_TO_NUMBER = {
+    '😡': '1',
+    '😠': '2',
+    '🙁': '2',
+    '😐': '3',
+    '😊': '4',
+    '😍': '5',
+}
+RATING_NUMBER_TO_EMOJI = {
+    '1': '😡',
+    '2': '😠',
+    '3': '😐',
+    '4': '😊',
+    '5': '😍',
+}
+RATING_NUMBER_TO_LABEL = {
+    '1': 'Very Dissatisfied',
+    '2': 'Dissatisfied',
+    '3': 'Neutral',
+    '4': 'Satisfied',
+    '5': 'Very Satisfied',
+}
+
+
+def normalize_rating(raw_rating):
+    """Best-effort conversion of a stored rating value (already a 1-5
+    number, a raw emoji, or something odd from older/legacy data) into
+    a consistent (number, emoji, label) triple."""
+    raw = str(raw_rating).strip()
+
+    if raw in RATING_EMOJI_TO_NUMBER:
+        number = RATING_EMOJI_TO_NUMBER[raw]
+    elif raw in RATING_NUMBER_TO_LABEL:
+        number = raw
+    else:
+        # Unrecognized value -- show it as-is, nothing to normalize.
+        return raw, '', ''
+
+    emoji = RATING_NUMBER_TO_EMOJI.get(number, '')
+    label = RATING_NUMBER_TO_LABEL.get(number, '')
+    return number, emoji, label
+
+
+def format_rating_for_report(raw_rating):
+    """'4/5 😊 (Satisfied)' when recognizable, otherwise the raw stored
+    value unchanged (so we never hide/lose data we can't parse)."""
+    number, emoji, label = normalize_rating(raw_rating)
+    if not label:
+        return str(raw_rating)
+    parts = [f"{number}/5"]
+    if emoji:
+        parts.append(emoji)
+    parts.append(f"({label})")
+    return " ".join(parts)
+
+
+# ----------------------------------------------------
 # MODELS
 # ----------------------------------------------------
 class Feedback(db.Model):
@@ -210,6 +349,13 @@ class Feedback(db.Model):
     rating = db.Column(db.String(50), nullable=False)
     comment = db.Column(db.Text, nullable=True)
     audio_status = db.Column(db.String(100), default='No audio recorded')
+    # The actual recorded voice-feedback clip, stored in the database
+    # (not on disk) so it survives Vercel's read-only/ephemeral
+    # filesystem and cold starts, and can be played back from the admin
+    # dashboard or linked from an exported report.
+    audio_filename = db.Column(db.String(255), nullable=True)
+    audio_mimetype = db.Column(db.String(100), nullable=True)
+    audio_data = db.Column(db.LargeBinary, nullable=True)
     is_read = db.Column(db.Boolean, default=False)
     # Which enrolled fingerprint (WebAuthn credential id) submitted this
     # record, if any. Used to enforce "one feedback per fingerprint per
@@ -398,8 +544,9 @@ def ensure_fingerprint_schema():
 
 
 def ensure_feedback_schema():
-    """Adds fingerprint_credential_id to an already-existing feedbacks
-    table, for the same reason as ensure_fingerprint_schema() above."""
+    """Adds fingerprint_credential_id and the audio-recording columns to
+    an already-existing feedbacks table, for the same reason as
+    ensure_fingerprint_schema() above."""
     inspector = inspect(db.engine)
     if "feedbacks" not in inspector.get_table_names():
         return
@@ -409,6 +556,26 @@ def ensure_feedback_schema():
     if "fingerprint_credential_id" not in columns:
         db.session.execute(sql_text(
             "ALTER TABLE feedbacks ADD COLUMN fingerprint_credential_id VARCHAR(255)"
+        ))
+        db.session.commit()
+
+    if "audio_filename" not in columns:
+        db.session.execute(sql_text(
+            "ALTER TABLE feedbacks ADD COLUMN audio_filename VARCHAR(255)"
+        ))
+        db.session.commit()
+
+    if "audio_mimetype" not in columns:
+        db.session.execute(sql_text(
+            "ALTER TABLE feedbacks ADD COLUMN audio_mimetype VARCHAR(100)"
+        ))
+        db.session.commit()
+
+    if "audio_data" not in columns:
+        # SQLite and Postgres spell "binary blob" differently.
+        blob_type = "BLOB" if USING_SQLITE else "BYTEA"
+        db.session.execute(sql_text(
+            f"ALTER TABLE feedbacks ADD COLUMN audio_data {blob_type}"
         ))
         db.session.commit()
 
@@ -645,19 +812,64 @@ def _has_submitted_today(credential_id):
 # ----------------------------------------------------
 @app.route('/submit-unlisted', methods=['POST'])
 def submit_unlisted():
-    unlisted_text = request.form.get('unlisted_request')
-    
-    if unlisted_text:
-        # Create a feedback record explicitly tagged as Additional Requests
-        new_feedback = Feedback()
-        new_feedback.service_name = 'additional_request'
-        new_feedback.sub_service = 'Unlisted Request / Comment'
-        new_feedback.rating = '💬 (Unlisted)'
-        new_feedback.comment = unlisted_text
-        new_feedback.timestamp = datetime.utcnow()
-        db.session.add(new_feedback)
-        db.session.commit()
-        
+    unlisted_text = (request.form.get('unlisted_request') or '').strip()
+
+    if not unlisted_text:
+        flash('Please describe the service or comment before submitting.', 'error')
+        return redirect(url_for('services'))
+
+    # Same toxicity/threat screening as the main feedback form -- this
+    # route used to skip it entirely, so a threatening or abusive
+    # "unlisted request" would have gone straight into the database.
+    is_blocked, block_reason, flagged_categories = evaluate_comment_safety(unlisted_text)
+    if is_blocked:
+        if block_reason == 'moderation':
+            log_admin_action(
+                'SYSTEM_ALERT',
+                f"Blocked an unlisted-service submission for toxic/threatening content. "
+                f"Categories: {', '.join(flagged_categories)}. Text: {unlisted_text[:200]}"
+            )
+            flash(
+                "⚠️ Your message was automatically blocked because it appears to contain "
+                "threatening, violent, or hateful language. This submission has not been saved. / "
+                "⚠️ መልእክትዎ አደገኛ ወይም አስፈራሪ ይዘት ስላለው ራስ-ሰር ታግዷል፤ አልተላከም።",
+                'error'
+            )
+        else:
+            log_admin_action(
+                'SYSTEM_ALERT',
+                f"Blocked an unlisted-service submission for profane language: {unlisted_text[:200]}"
+            )
+            flash(
+                "ያልተገባ ቃል ተገኝቷል። እባክዎን በትህትና ያስቀምጡ። / "
+                "Inappropriate language detected. Please keep it respectful.",
+                'error'
+            )
+        return redirect(url_for('services'))
+
+    # Create a feedback record explicitly tagged as Additional Requests
+    new_feedback = Feedback()
+    new_feedback.service_name = 'additional_request'
+    new_feedback.sub_service = 'Unlisted Request / Comment'
+    new_feedback.rating = '💬 (Unlisted)'
+    new_feedback.comment = unlisted_text
+    new_feedback.audio_status = 'No audio recorded'
+    new_feedback.timestamp = datetime.utcnow()
+
+    # Same voice-recording support as the main feedback form -- if the
+    # "record voice" widget attached a clip to this submission, persist
+    # it the same way (playable later from the admin dashboard/reports).
+    audio_bytes, audio_filename, audio_mimetype = _read_uploaded_audio()
+    if audio_bytes:
+        new_feedback.audio_data = audio_bytes
+        new_feedback.audio_filename = audio_filename
+        new_feedback.audio_mimetype = audio_mimetype
+        size_kb = round(len(audio_bytes) / 1024, 1)
+        new_feedback.audio_status = f"Audio recorded ({size_kb} KB)"
+
+    db.session.add(new_feedback)
+    db.session.commit()
+
     flash('Your request has been submitted successfully!', 'success')
     return redirect(url_for('services'))
 def _resolve_service_key(fb, service_key_by_name):
@@ -812,7 +1024,7 @@ def build_ai_insights(records):
 
 
 # --- EXCEL REPORT (openpyxl) ---
-def generate_excel_report(records):
+def generate_excel_report(records, base_url=""):
     wb = openpyxl.Workbook()
     ws = wb.active
     if ws is None:
@@ -825,6 +1037,11 @@ def generate_excel_report(records):
     title_font = Font(name="Calibri", size=16, bold=True, color="1B2A4A")
     meta_font = Font(name="Calibri", size=10, italic=True, color="555555")
     data_font = Font(name="Calibri", size=10)
+    # Rating column gets a font more likely to carry emoji glyphs. The
+    # number + word label alongside it (see format_rating_for_report)
+    # is what stays legible even where this font isn't installed.
+    rating_font = Font(name="Segoe UI Emoji", size=10)
+    link_font = Font(name="Calibri", size=10, color="0563C1", underline="single")
 
     border_thin = Border(
         left=Side(style='thin', color='DDDDDD'),
@@ -849,19 +1066,46 @@ def generate_excel_report(records):
         cell.alignment = Alignment(horizontal="center", vertical="center")
 
     for r_idx, rec in enumerate(records, start=5):
+        has_audio = bool(getattr(rec, 'audio_data', None))
+        audio_display = "▶ Play Recording" if has_audio else (rec.audio_status or "No audio recorded")
+
         ws.append([
             f"#{rec.id}",
             rec.service_name,
             rec.sub_service,
-            str(rec.rating),
+            format_rating_for_report(rec.rating),
             rec.comment or "No comment provided.",
-            rec.audio_status or "No audio recorded",
+            audio_display,
             str(rec.timestamp)
         ])
         for c_idx in range(1, len(headers) + 1):
             cell = ws.cell(row=r_idx, column=c_idx)
-            cell.font = data_font
             cell.border = border_thin
+            if c_idx == 4:
+                cell.font = rating_font
+            elif c_idx == 6 and has_audio and base_url:
+                cell.font = link_font
+                # For merged cells, assign hyperlink to the top-left cell of the merged range
+                url = f"{base_url}/admin/audio/{rec.id}"
+                # Always assign the hyperlink to the top-left (anchor) cell of the
+                # (possibly merged) region. Some cell proxy types (e.g. MergedCell)
+                # do not allow setting attributes like .hyperlink, so ensure we
+                # obtain a real writable Cell from the worksheet.
+                anchor_row: int | None = None
+                anchor_col: int | None = None
+                if isinstance(cell, MergedCell):
+                    for mrange in ws.merged_cells.ranges:
+                        min_col, min_row, max_col, max_row = mrange.bounds
+                        if min_row <= r_idx <= max_row and min_col <= c_idx <= max_col:
+                            anchor_row, anchor_col = min_row, min_col
+                            break
+                if anchor_row is None or anchor_col is None:
+                    anchor_row, anchor_col = r_idx, c_idx
+
+                anchor_cell = ws.cell(row=anchor_row, column=anchor_col)
+                anchor_cell.hyperlink = Hyperlink(ref=anchor_cell.coordinate, target=url)
+            else:
+                cell.font = data_font
             if c_idx in [1, 4, 7]:
                 cell.alignment = Alignment(horizontal="center")
 
@@ -877,8 +1121,35 @@ def generate_excel_report(records):
     return output
 
 
+def _add_docx_hyperlink(paragraph, text, url):
+    """python-docx has no built-in hyperlink API, so this builds the
+    required <w:hyperlink> XML by hand and appends it to the paragraph."""
+    part = paragraph.part
+    r_id = part.relate_to(url, DOCX_RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
+
+    hyperlink = OxmlElement('w:hyperlink')
+    hyperlink.set(qn('r:id'), r_id)
+
+    new_run = OxmlElement('w:r')
+    rPr = OxmlElement('w:rPr')
+    color = OxmlElement('w:color')
+    color.set(qn('w:val'), '0563C1')
+    rPr.append(color)
+    u = OxmlElement('w:u')
+    u.set(qn('w:val'), 'single')
+    rPr.append(u)
+    new_run.append(rPr)
+
+    t = OxmlElement('w:t')
+    t.text = text
+    new_run.append(t)
+    hyperlink.append(new_run)
+    paragraph._p.append(hyperlink)
+    return hyperlink
+
+
 # --- WORD REPORT (python-docx) ---
-def generate_word_report(records):
+def generate_word_report(records, base_url=""):
     doc = docx.Document()
 
     section = doc.sections[0]
@@ -909,7 +1180,7 @@ def generate_word_report(records):
 
     hdr_cells = table.rows[0].cells
     headers = ["ID & Date", "Service / Sub-Service", "Rating", "Comment", "Audio"]
-    col_widths = [Inches(1.2), Inches(1.5), Inches(0.8), Inches(2.0), Inches(1.0)]
+    col_widths = [Inches(1.2), Inches(1.5), Inches(0.9), Inches(1.9), Inches(0.9)]
 
     for i, title in enumerate(headers):
         hdr_cells[i].text = title
@@ -924,18 +1195,32 @@ def generate_word_report(records):
                 run.font.size = Pt(10)
 
     for rec in records:
+        has_audio = bool(getattr(rec, 'audio_data', None))
+
         row_cells = table.add_row().cells
         row_cells[0].text = f"#{rec.id}\n{str(rec.timestamp).split()[0]}"
         row_cells[1].text = f"{rec.service_name}\n({rec.sub_service})"
-        row_cells[2].text = str(rec.rating)
+        row_cells[2].text = format_rating_for_report(rec.rating)
         row_cells[3].text = rec.comment or "No comment."
-        row_cells[4].text = rec.audio_status or "None"
+
+        if has_audio and base_url:
+            row_cells[4].text = ""
+            _add_docx_hyperlink(
+                row_cells[4].paragraphs[0],
+                "▶ Play Audio",
+                f"{base_url}/admin/audio/{rec.id}"
+            )
+        else:
+            row_cells[4].text = rec.audio_status or "None"
 
         for i, cell in enumerate(row_cells):
             cell.width = col_widths[i]
             for p in cell.paragraphs:
                 for run in p.runs:
                     run.font.size = Pt(9)
+                    if i == 2:
+                        # Rating column: give the emoji a chance to render.
+                        run.font.name = "Segoe UI Emoji"
 
     output = io.BytesIO()
     doc.save(output)
@@ -944,7 +1229,7 @@ def generate_word_report(records):
 
 
 # --- PDF REPORT (ReportLab) ---
-def generate_pdf_report(records):
+def generate_pdf_report(records, base_url=""):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -1006,16 +1291,29 @@ def generate_pdf_report(records):
     ]]
 
     for rec in records:
+        has_audio = bool(getattr(rec, 'audio_data', None))
+        if has_audio and base_url:
+            audio_cell_text = (
+                f'<link href="{base_url}/admin/audio/{rec.id}" color="blue">'
+                f'<u>Play Recording</u></link>'
+            )
+        else:
+            audio_cell_text = rec.audio_status or "No audio"
+
         table_data.append([
             Paragraph(f"#{rec.id}", cell_style),
             Paragraph(f"<b>{rec.service_name}</b><br/>{rec.sub_service}", cell_style),
-            Paragraph(str(rec.rating), cell_style),
+            # Note: reportlab's default Helvetica has no color-emoji
+            # glyphs, so the number/label text is what actually carries
+            # the rating here -- the emoji character is included but may
+            # not render depending on the PDF viewer's fonts.
+            Paragraph(format_rating_for_report(rec.rating), cell_style),
             Paragraph(rec.comment or "No comment provided.", cell_style),
-            Paragraph(rec.audio_status or "No audio", cell_style),
+            Paragraph(audio_cell_text, cell_style),
             Paragraph(str(rec.timestamp), cell_style)
         ])
 
-    col_widths = [50, 160, 60, 260, 100, 110]
+    col_widths = [50, 160, 90, 230, 100, 110]
     t = Table(table_data, colWidths=col_widths, repeatRows=1)
 
     t.setStyle(TableStyle([
@@ -1435,13 +1733,83 @@ def _generate_tts_audio(text, voice, file_path):
         f.write(audio_response.content)
 
 
+# ----------------------------------------------------
+# AUTOMATIC VOICE-GUIDE PHRASES (the "ATM-style" walkthrough)
+#
+# Each key below is a *page*, not free text -- the frontend never sends
+# arbitrary text here, it just asks "play the guide for this page, in
+# this language" via /api/voice-guide/<page_key>?lang=am|en. Amharic
+# (`am`) is always the default if no ?lang is passed, matching "runs
+# automatically in Amharic first, like an ATM"; once a citizen picks
+# English on the language screen, the page should append ?lang=en to
+# every subsequent guide call so the rest of the walkthrough continues
+# in that language.
+#
+# Add one entry per page/step you want narrated, then call
+# /api/voice-guide/<that_key> from that page's template.
+# ----------------------------------------------------
+GUIDE_PHRASES = {
+    'fingerprint_intro': {
+        'am': 'እንኳን ደህና መጡ ወደ የኢትዮጵያ ፌዴራል ፖሊስ የደንበኞች አስተያየት ስርዓት። እባክዎ የጣት አሻራዎን በስክሪኑ ላይ ያድርጉ።',
+        'en': 'Welcome to the Ethiopian Federal Police Feedback System. Please place your finger on the sensor to begin.'
+    },
+    'welcome_language': {
+        'am': 'እባክዎ የሚፈልጉትን ቋንቋ ይምረጡ፣ አማርኛ ወይም እንግሊዝኛ።',
+        'en': 'Please select your preferred language, Amharic or English.'
+    },
+    'services_intro': {
+        'am': 'እባክዎ አስተያየት መስጠት የሚፈልጉበትን አገልግሎት ይምረጡ።',
+        'en': 'Please select the service you would like to give feedback about.'
+    },
+    'feedback_intro': {
+        'am': 'እባክዎ ደረጃዎን ይምረጡ እና አስተያየትዎን ይተይቡ ወይም በድምጽ ይቅዱ።',
+        'en': 'Please choose your rating, then type or record your feedback.'
+    },
+    'thank_you': {
+        'am': 'አገልግሎቱን ስለተጠቀሙ እናመሰግናለን!',
+        'en': 'Thank you for using our service!'
+    },
+}
+
+
+@app.route('/api/voice-guide/<page_key>')
+def voice_guide(page_key):
+    """Serves the pre-written guide narration for one page/step, in the
+    requested language (Amharic by default). Cached the same way as
+    /api/tts below, so each phrase is only synthesized once."""
+    lang = (request.args.get('lang') or 'am').strip().lower()
+    if lang not in ('am', 'en'):
+        lang = 'am'
+
+    phrase_set = GUIDE_PHRASES.get(page_key)
+    if not phrase_set:
+        return jsonify({"status": "error", "message": f"Unknown voice-guide page: {page_key}"}), 404
+
+    text = phrase_set.get(lang) or phrase_set.get('am')
+    voice = TTS_VOICE_BY_LANG.get(lang, TTS_VOICE_BY_LANG['am'])
+    file_path, cache_key = _tts_cache_path(text, lang)
+
+    if not os.path.exists(file_path):
+        try:
+            _generate_tts_audio(text, voice, file_path)
+        except Exception as e:
+            print("VOICE GUIDE TTS ERROR:", str(e))
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            return jsonify({"status": "error", "message": "Voice guide is temporarily unavailable."}), 503
+
+    return send_from_directory(TTS_CACHE_DIR, f"{cache_key}.mp3", mimetype='audio/mpeg')
+
+
 @app.route('/api/tts')
 def text_to_speech():
     """?text=<guide phrase>&lang=am|en -> audio/mpeg.
 
     Generates the audio on first request and serves the cached file on
     every request after that, so repeat visits (and every other device
-    asking for the same phrase) don't re-hit the API.
+    asking for the same phrase) don't re-hit the API. Kept alongside
+    /api/voice-guide for any free-text TTS you still need elsewhere;
+    prefer /api/voice-guide for the fixed per-page walkthrough narration.
     """
     text = (request.args.get('text') or '').strip()
     lang = (request.args.get('lang') or 'am').strip().lower()
@@ -1503,6 +1871,20 @@ def warm_tts_cache():
 # ----------------------------------------------------
 # FEEDBACK SUBMIT / UNREAD ROUTES
 # ----------------------------------------------------
+def _read_uploaded_audio():
+    """Pulls the recorded voice-feedback clip out of a multipart
+    /submit-feedback POST, if one was attached (the recorder script
+    posts it as FormData field 'audio'). Returns (bytes, filename,
+    mimetype) or (None, None, None) if no clip was sent."""
+    audio_file = request.files.get('audio')
+    if not audio_file or not audio_file.filename:
+        return None, None, None
+    audio_bytes = audio_file.read()
+    if not audio_bytes:
+        return None, None, None
+    return audio_bytes, audio_file.filename, (audio_file.mimetype or 'audio/webm')
+
+
 @app.route('/submit-feedback', methods=['POST'])
 @app.route('/api/submit-feedback', methods=['POST'])
 @app.route('/submit_feedback', methods=['POST'])
@@ -1535,6 +1917,9 @@ def submit_feedback():
             return redirect(url_for('thank_you_page', message='limit'))
 
         # Handle both JSON API requests and standard form submissions
+        # (the voice recorder posts multipart/form-data, which lands here
+        # too -- request.form has the text fields, request.files has the
+        # audio clip).
         if request.content_type and 'application/json' in request.content_type:
             data = request.get_json()
             if not data:
@@ -1581,12 +1966,39 @@ def submit_feedback():
             url_service = str(raw_service).strip().lower()
             sub_service = (data.get('sub_service', 'general_service') if 'data' in locals() and data else request.form.get('sub_service', 'general_service'))
 
-        if is_inappropriate(comment):
+        is_blocked, block_reason, flagged_categories = evaluate_comment_safety(comment)
+        if is_blocked:
+            if block_reason == 'moderation':
+                # A real threat/hate/violence flag, not just a bad word --
+                # log it so admin staff can actually review the attempt.
+                log_admin_action(
+                    'SYSTEM_ALERT',
+                    f"Blocked a feedback submission for toxic/threatening content. "
+                    f"Categories: {', '.join(flagged_categories)}. Comment: {comment[:200]}"
+                )
+                warning_message = (
+                    "⚠️ Your message was automatically blocked because it appears to contain "
+                    "threatening, violent, or hateful language. This submission has not been saved. / "
+                    "⚠️ መልእክትዎ አደገኛ ወይም አስፈራሪ ይዘት ስላለው ራስ-ሰር ታግዷል፤ አልተላከም።"
+                )
+            else:
+                log_admin_action(
+                    'SYSTEM_ALERT',
+                    f"Blocked a feedback submission for profane language: {comment[:200]}"
+                )
+                warning_message = (
+                    "ያልተገባ ቃል ተገኝቷል። እባክዎን በትህትና አስተያየትዎን ያስቀምጡ። / "
+                    "Inappropriate language detected. Please keep your feedback respectful."
+                )
+
             if request.content_type and 'application/json' in request.content_type:
                 return jsonify({
                     "status": "error",
-                    "message": "ያልተገባ ቃል ተገኝቷል። እባክዎን በትህትና አስተያየትዎን ያስቀምጡ። / Inappropriate language detected. Please keep your feedback respectful."
-                }), 400
+                    "blocked": True,
+                    "reason": block_reason,
+                    "message": warning_message
+                }), 403
+
             # FIX: previously redirected to admin_login. Send the citizen
             # back to the form they came from (or the feedback page as a
             # fallback) so they can edit and resubmit.
@@ -1608,6 +2020,18 @@ def submit_feedback():
         new_fb.is_read = False
         new_fb.fingerprint_credential_id = fingerprint_credential_id
         new_fb.timestamp = parsed_ts
+
+        # Persist the actual recorded clip (if the recorder attached one)
+        # so it can be played back from the admin dashboard / reports,
+        # instead of being thrown away after transcription like before.
+        audio_bytes, audio_filename, audio_mimetype = _read_uploaded_audio()
+        if audio_bytes:
+            new_fb.audio_data = audio_bytes
+            new_fb.audio_filename = audio_filename
+            new_fb.audio_mimetype = audio_mimetype
+            size_kb = round(len(audio_bytes) / 1024, 1)
+            new_fb.audio_status = f"Audio recorded ({size_kb} KB)"
+
         db.session.add(new_fb)
         db.session.commit()
 
@@ -1999,8 +2423,13 @@ def export_feedbacks(format_type):
     records = get_filtered_feedbacks(admin_info['type'], admin_info['service'], admin_info['sub_service'])
     log_admin_action(logged_in_admin, f"Exported feedback report in {format_type.upper()} format.")
 
+    # Absolute base URL (e.g. "https://federal-police-feedback.vercel.app")
+    # so the "Play Recording" links embedded in Excel/Word/PDF work when
+    # the file is opened later, outside of this request.
+    base_url = request.host_url.rstrip('/')
+
     if format_type == 'excel':
-        file_io = generate_excel_report(records)
+        file_io = generate_excel_report(records, base_url)
         return send_file(
             file_io,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -2008,7 +2437,7 @@ def export_feedbacks(format_type):
             download_name=f"police_feedback_report_{datetime.now().strftime('%Y%m%d')}.xlsx"
         )
     elif format_type == 'word':
-        file_io = generate_word_report(records)
+        file_io = generate_word_report(records, base_url)
         return send_file(
             file_io,
             mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -2016,7 +2445,7 @@ def export_feedbacks(format_type):
             download_name=f"police_feedback_report_{datetime.now().strftime('%Y%m%d')}.docx"
         )
     elif format_type == 'pdf':
-        file_io = generate_pdf_report(records)
+        file_io = generate_pdf_report(records, base_url)
         return send_file(
             file_io,
             mimetype='application/pdf',
@@ -2025,6 +2454,28 @@ def export_feedbacks(format_type):
         )
 
     return "Invalid export format requested.", 400
+
+
+@app.route('/admin/audio/<int:fb_id>')
+def admin_play_audio(fb_id):
+    """Streams back the citizen's recorded voice-feedback clip so it can
+    be played from the admin dashboard, the notifications page, or a
+    'Play Recording' link in an exported Excel/Word/PDF report."""
+    logged_in_admin = session.get('admin_user')
+    admin_credentials = get_admin_credentials()
+    if not logged_in_admin or logged_in_admin not in admin_credentials:
+        return redirect(url_for('admin_login'))
+
+    fb = db.session.get(Feedback, fb_id)
+    if not fb or not fb.audio_data:
+        return "No audio recording found for this feedback.", 404
+
+    filename = fb.audio_filename or f"feedback_{fb_id}_audio.webm"
+    return Response(
+        fb.audio_data,
+        mimetype=fb.audio_mimetype or 'audio/webm',
+        headers={'Content-Disposition': f'inline; filename="{filename}"'}
+    )
 
 
 @app.route('/admin/mark-read/<int:fb_id>', methods=['POST'])
