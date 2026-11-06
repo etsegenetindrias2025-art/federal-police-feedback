@@ -1,0 +1,9 @@
+# Environment variables
+.env
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Optional: If you want to make sure any old local files are ignored
+local_dev.db
