@@ -692,22 +692,21 @@ def init_db():
 
         # Migration for older database versions:
         # move the old HR sub-service from "other" to the new "hr" service.
-        old_hr = SubService.query.filter_by(
-            service_key="other",
-            sub_service_key="hr"
-        ).first()
-        if old_hr:
-            old_hr.service_key = "hr"
-            old_hr.sub_service_name = "Human Resources"
-            old_hr.amharic_name = "ሰው ሃብት"
+        # Safeguarded migration for older database versions
+        try:
+            old_hr = SubService.query.filter_by(service_key="other", sub_service_key="hr").first()
+            if old_hr:
+                old_hr.service_key = "hr"
+                old_hr.sub_service_name = "Human Resources"
+                old_hr.amharic_name = "ሰው ኃይል"
 
-        # Keep historical feedback records consistent with the new main service.
-        old_hr_feedbacks = Feedback.query.filter_by(
-            service_name="other",
-            sub_service="hr"
-        ).all()
-        for fb in old_hr_feedbacks:
-            fb.service_name = "hr"
+            old_hr_feedbacks = Feedback.query.filter_by(service_name="other", sub_service="hr").all()
+            for fb in old_hr_feedbacks:
+                fb.service_name = "hr"
+                fb.sub_service = None
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
         db.session.commit()
 
