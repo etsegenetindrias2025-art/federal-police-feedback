@@ -12,6 +12,12 @@ from datetime import datetime
 from openai import OpenAI
 from config import Config
 from extensions import db
+from flask import Flask
+from extensions import db
+
+app = Flask(__name__)
+
+# Your routes and configurations go here...
 
 from sqlalchemy import inspect, text as sql_text
 from werkzeug.security import check_password_hash, generate_password_hash
