@@ -42,8 +42,11 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
-import psycopg2
-import psycopg2.extras
+try:
+    import psycopg2
+    import psycopg2.extras
+except ImportError:  # keep the app bootable even if the driver is missing
+    psycopg2 = None
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -59,7 +62,9 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", "YOUR_OPENAI_API_KEY"))
 # SQLite fallback when you don't.
 # ----------------------------------------------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-LOCAL_SQLITE_PATH = os.path.join(BASE_DIR, "local_dev.db")
+IS_VERCEL = bool(os.getenv("VERCEL"))
+# Vercel's filesystem is read-only except /tmp
+LOCAL_SQLITE_PATH = "/tmp/local_dev.db" if IS_VERCEL else os.path.join(BASE_DIR, "local_dev.db")
 
 # Bulletproof TTS cache directory setup for Vercel read-only filesystem
 TTS_CACHE_DIR = os.path.join(BASE_DIR, "tts_cache")
@@ -71,6 +76,9 @@ except OSError:
 
 
 def _postgres_is_reachable(url, timeout=3):
+    if psycopg2 is None:
+        print("[startup] psycopg2 is not installed")
+        return False
     try:
         test_conn = psycopg2.connect(url, connect_timeout=timeout)
         test_conn.close()
@@ -81,12 +89,18 @@ def _postgres_is_reachable(url, timeout=3):
 
 
 # Single clean initialization
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{LOCAL_SQLITE_PATH}")
+# On Vercel prefer the pooled (serverless-friendly) connection string if given
+DATABASE_URL = (
+    (os.getenv("DATABASE_URL_POOLED") if IS_VERCEL else None)
+    or os.getenv("DATABASE_URL", f"sqlite:///{LOCAL_SQLITE_PATH}")
+)
 
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-if DATABASE_URL.startswith("postgresql") and not _postgres_is_reachable(DATABASE_URL):
+# Only fall back to SQLite locally -- on Vercel a silent fallback would hide
+# the real problem and lose data, so we keep the Postgres URL there.
+if (not IS_VERCEL) and DATABASE_URL.startswith("postgresql") and not _postgres_is_reachable(DATABASE_URL):
     print("[startup] Falling back to a local SQLite database for this run:")
     print(f"[startup]   {LOCAL_SQLITE_PATH}")
     print("[startup] (Your .env DATABASE_URL is untouched -- once that Postgres")
@@ -98,7 +112,7 @@ USING_SQLITE = DATABASE_URL.startswith("sqlite:")
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = (
-    {} if USING_SQLITE else {"pool_pre_ping": True}
+    {} if USING_SQLITE else {"pool_pre_ping": True, "pool_recycle": 300}
 )
 
 db.init_app(app)
@@ -142,6 +156,8 @@ def get_db_connection():
             "get_db_connection() only works against Postgres. You're currently "
             "running on the local SQLite fallback (no DATABASE_URL set)."
         )
+    if psycopg2 is None:
+        raise RuntimeError("psycopg2 is not installed")
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     return conn
 
