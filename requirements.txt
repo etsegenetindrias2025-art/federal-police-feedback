@@ -2,7 +2,8 @@ Flask==3.0.2
 Werkzeug==3.0.1
 Flask-SQLAlchemy
 SQLAlchemy
-psycopg2-binary
+psycopg2-binary>=2.9.10
+psycopg[binary]
 python-dotenv
 openai
 gTTS

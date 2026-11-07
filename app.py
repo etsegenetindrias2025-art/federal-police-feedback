@@ -95,8 +95,12 @@ DATABASE_URL = (
     or os.getenv("DATABASE_URL", f"sqlite:///{LOCAL_SQLITE_PATH}")
 )
 
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+# Normalise whatever scheme was pasted into the env var (postgres://,
+# postgresql+psycopg://, postgresql+psycopg2://, ...) to plain postgresql://.
+# Plain postgresql:// is what psycopg2.connect() needs; for SQLAlchemy we add
+# the "+psycopg2" driver name below so it never tries to import "psycopg" (v3).
+import re as _re
+DATABASE_URL = _re.sub(r"^postgres(?:ql)?(?:\+\w+)?://", "postgresql://", DATABASE_URL.strip().strip('"').strip("'"), count=1)
 
 # Only fall back to SQLite locally -- on Vercel a silent fallback would hide
 # the real problem and lose data, so we keep the Postgres URL there.
@@ -109,7 +113,10 @@ if (not IS_VERCEL) and DATABASE_URL.startswith("postgresql") and not _postgres_i
 
 USING_SQLITE = DATABASE_URL.startswith("sqlite:")
 
-app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+app.config["SQLALCHEMY_DATABASE_URI"] = (
+    DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+    if DATABASE_URL.startswith("postgresql://") else DATABASE_URL
+)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = (
     {} if USING_SQLITE else {"pool_pre_ping": True, "pool_recycle": 300}
@@ -692,21 +699,22 @@ def init_db():
 
         # Migration for older database versions:
         # move the old HR sub-service from "other" to the new "hr" service.
-        # Safeguarded migration for older database versions
-        try:
-            old_hr = SubService.query.filter_by(service_key="other", sub_service_key="hr").first()
-            if old_hr:
-                old_hr.service_key = "hr"
-                old_hr.sub_service_name = "Human Resources"
-                old_hr.amharic_name = "ሰው ኃይል"
+        old_hr = SubService.query.filter_by(
+            service_key="other",
+            sub_service_key="hr"
+        ).first()
+        if old_hr:
+            old_hr.service_key = "hr"
+            old_hr.sub_service_name = "Human Resources"
+            old_hr.amharic_name = "ሰው ሃብት"
 
-            old_hr_feedbacks = Feedback.query.filter_by(service_name="other", sub_service="hr").all()
-            for fb in old_hr_feedbacks:
-                fb.service_name = "hr"
-                fb.sub_service = None
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
+        # Keep historical feedback records consistent with the new main service.
+        old_hr_feedbacks = Feedback.query.filter_by(
+            service_name="other",
+            sub_service="hr"
+        ).all()
+        for fb in old_hr_feedbacks:
+            fb.service_name = "hr"
 
         db.session.commit()
 
