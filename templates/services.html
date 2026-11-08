@@ -119,6 +119,8 @@
             <h2 class="text-xl md:text-2xl font-bold mb-6 text-center text-amber-500 tracking-wide" data-i18n="chooseCategory">
                 እባክዎ የአገልግሎት ምድብ ይምረጡ
             </h2>
+            
+            <!-- Dynamic Categories Grid List -->
             <div id="main-categories-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="col-span-2 text-center py-8 text-amber-500/70 animate-pulse">
                     <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
@@ -126,7 +128,7 @@
                 </div>
             </div>
 
-            <!-- Custom Service Request Box -->
+            <!-- Custom Service Request Box (Moved to Bottom) -->
             <div id="custom-request-box" class="mt-6 p-5 rounded-2xl border border-amber-500/30 bg-slate-900/60 backdrop-blur-md">
                 <h4 class="text-sm font-bold text-amber-400 mb-2" data-i18n="unlistedTitle">የሚፈልጉትን አገልግሎት አላገኙም?</h4>
                 <p class="text-xs opacity-75 mb-3" data-i18n="unlistedDesc">ከላይ ባለው ዝርዝር ውስጥ የሚፈልጉትን አገልግሎት ካላገኙ፣ እባክዎ የሚፈልጉትን አገልግሎት ወይም ጥያቄ እዚህ ይጻፉ።</p>
@@ -186,12 +188,8 @@
         let departmentsData = {};
         let selectedCategoryKey = '';
         const urlParams = new URLSearchParams(window.location.search);
-        // Amharic is the default, same as the Flask routes
         const currentLang = (urlParams.get('lang') === 'en') ? 'en' : 'am';
 
-        // ------------------------------------------------------------
-        // ALL PAGE TEXT, IN BOTH LANGUAGES
-        // ------------------------------------------------------------
         const I18N = {
             am: {
                 orgName: 'የኢትዮጵያ ፌዴራል ፖሊስ',
@@ -251,7 +249,6 @@
 
         const t = I18N[currentLang];
 
-        // Fills every element that has data-i18n / data-i18n-placeholder
         function applyTranslations() {
             document.documentElement.lang = currentLang;
             document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -310,6 +307,9 @@
             }
 
             for (const [key, catData] of Object.entries(departmentsData)) {
+                // Skip rendering 'additional_request' in the grid cards loop
+                if (key === 'additional_request') continue;
+
                 let catName = catData.title[currentLang] || catData.title['en'];
                 let catDesc = catData.description ? (catData.description[currentLang] || catData.description['en']) : "";
 
@@ -423,8 +423,6 @@
                     showToast(t.toastMsg);
                     document.getElementById('customServiceInput').value = '';
 
-                    // Stay on the citizen side: hide the message, then go back
-                    // to the start of the kiosk flow (fingerprint page).
                     setTimeout(() => {
                         successAlert.classList.add('hidden');
                         window.location.href = '/';
