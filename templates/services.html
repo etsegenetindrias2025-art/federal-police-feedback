@@ -119,8 +119,7 @@
             <h2 class="text-xl md:text-2xl font-bold mb-6 text-center text-amber-500 tracking-wide" data-i18n="chooseCategory">
                 እባክዎ የአገልግሎት ምድብ ይምረጡ
             </h2>
-            
-            <!-- Dynamic Categories Grid List -->
+
             <div id="main-categories-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="col-span-2 text-center py-8 text-amber-500/70 animate-pulse">
                     <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
@@ -128,7 +127,7 @@
                 </div>
             </div>
 
-            <!-- Custom Service Request Box (Moved to Bottom) -->
+            <!-- Custom Service Request Box -->
             <div id="custom-request-box" class="mt-6 p-5 rounded-2xl border border-amber-500/30 bg-slate-900/60 backdrop-blur-md">
                 <h4 class="text-sm font-bold text-amber-400 mb-2" data-i18n="unlistedTitle">የሚፈልጉትን አገልግሎት አላገኙም?</h4>
                 <p class="text-xs opacity-75 mb-3" data-i18n="unlistedDesc">ከላይ ባለው ዝርዝር ውስጥ የሚፈልጉትን አገልግሎት ካላገኙ፣ እባክዎ የሚፈልጉትን አገልግሎት ወይም ጥያቄ እዚህ ይጻፉ።</p>
@@ -137,10 +136,9 @@
                     <textarea id="customServiceInput" rows="4" class="w-full bg-slate-950/80 border border-amber-500/40 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-amber-400 resize-none" data-i18n-placeholder="unlistedPlaceholder" placeholder="እባክዎ የሚፈልጉትን አገልግሎት ወይም ጥያቄ እዚህ ይጻፉ..."></textarea>
                 </div>
 
-                <!-- Success Alert Box -->
                 <div id="success-alert" class="hidden mt-3 p-3.5 rounded-xl bg-emerald-500/20 border border-emerald-500 text-emerald-300 text-xs font-bold text-center flex items-center justify-center space-x-2 shadow-lg transition-all duration-500">
                     <i class="fa-solid fa-circle-check text-base"></i>
-                    <span id="success-msg-text" data-i18n="successMsg">መልእክቱ ተልኳል! አገልግሎቱን ስለተጠቀሙ እናመሰግናለን።</span>
+                    <span data-i18n="successMsg">መልእክቱ ተልኳል! አገልግሎቱን ስለተጠቀሙ እናመሰግናለን።</span>
                 </div>
 
                 <div class="mt-3 text-right">
@@ -166,8 +164,10 @@
         <div class="mt-8 pt-5 border-t border-amber-500/20 rounded-2xl p-4" style="background: var(--audio-bg);">
             <p class="text-[11px] text-amber-500 font-bold uppercase tracking-wider text-center mb-3" data-i18n="audioAssistance">የድምጽ እርዳታ</p>
             <div class="flex flex-wrap items-center justify-center gap-2">
-                <button onclick="playVoiceGuide('Please choose the service category you would like to rate today.', 'en')" class="voice-btn">🔊 <span data-i18n="englishGuide">የእንግሊዝኛ መመሪያ</span></button>
-                <button onclick="playVoiceGuide('እባክዎ ሊገመግሙት የሚፈልጉትን ዋና አገልግሎት ይምረጡ።', 'am')" class="voice-btn">🔊 <span data-i18n="amharicGuide">አማርኛ መመሪያ</span></button>
+                <!-- English: AI voice -->
+                <button onclick="playEnglish('Select the service you received: Police Clearance, Complaint, Hospital, Logistics, Education and Training, or Other Services.')" class="voice-btn">🔊 <span data-i18n="englishGuide">የእንግሊዝኛ መመሪያ</span></button>
+                <!-- Amharic: your recording (static/audio/Am/Service.m4a) -->
+                <button onclick="playAmharic('Service')" class="voice-btn">🔊 <span data-i18n="amharicGuide">አማርኛ መመሪያ</span></button>
             </div>
         </div>
     </div>
@@ -179,14 +179,15 @@
         <div class="text-xs opacity-60 tracking-wider uppercase font-medium" data-i18n="footer">የፌዴራል ፖሊስ ኪዮስክ v4.5</div>
     </div>
 
-    <!-- Toast Notification Container -->
+    <!-- Toast -->
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 transition-all duration-300 transform translate-y-20 opacity-0 pointer-events-none">
         <div id="toast-message" class="bg-slate-900 border border-amber-500 text-white px-4 py-3 rounded-xl shadow-2xl text-xs font-bold"></div>
     </div>
 
+    <script src="/static/js/voice.js"></script>
     <script>
         let departmentsData = {};
-        let selectedCategoryKey = '';
+        const HIDDEN_CATEGORIES = ['additional_request'];   // used by the "unlisted request" box, not a real category
         const urlParams = new URLSearchParams(window.location.search);
         const currentLang = (urlParams.get('lang') === 'en') ? 'en' : 'am';
 
@@ -265,58 +266,50 @@
 
         function showToast(message) {
             const toast = document.getElementById('toast-container');
-            const msgEl = document.getElementById('toast-message');
-            msgEl.innerText = message;
+            document.getElementById('toast-message').innerText = message;
             toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
-            setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
-            }, 3000);
+            setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none'), 3000);
         }
 
-        async function fetchDepartmentsFromPSQL() {
+        async function fetchDepartments() {
             try {
                 const response = await fetch('/api/departments');
                 if (!response.ok) throw new Error('Network response was not ok');
 
                 const contentType = response.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
-                    departmentsData = await response.json();
-                    renderMainCategories();
-                } else {
-                    throw new TypeError("Received offline fallback HTML instead of JSON data.");
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new TypeError('Received HTML instead of JSON data.');
                 }
+                departmentsData = await response.json();
+                renderMainCategories();
             } catch (error) {
-                console.warn('Failed to load from PostgreSQL or offline fallback triggered:', error);
+                console.warn('Failed to load departments:', error);
                 document.getElementById('main-categories-container').innerHTML = `
                     <div class="col-span-2 text-center py-6 text-amber-400">
                         <i class="fa-solid fa-triangle-exclamation text-2xl mb-2"></i>
                         <p class="text-sm font-bold">${t.offlineTitle}</p>
                         <p class="text-xs opacity-70 mt-1">${t.offlineDesc}</p>
-                    </div>
-                `;
+                    </div>`;
             }
         }
 
         function renderMainCategories() {
             const container = document.getElementById('main-categories-container');
-            container.innerHTML = "";
+            container.innerHTML = '';
 
-            if (Object.keys(departmentsData).length === 0) {
+            const entries = Object.entries(departmentsData).filter(([key]) => !HIDDEN_CATEGORIES.includes(key));
+            if (entries.length === 0) {
                 container.innerHTML = `<div class="col-span-2 text-center py-6 text-amber-400">${t.noRecords}</div>`;
                 return;
             }
 
-            for (const [key, catData] of Object.entries(departmentsData)) {
-                // Skip rendering 'additional_request' in the grid cards loop
-                if (key === 'additional_request') continue;
-
-                let catName = catData.title[currentLang] || catData.title['en'];
-                let catDesc = catData.description ? (catData.description[currentLang] || catData.description['en']) : "";
+            for (const [key, catData] of entries) {
+                const catName = catData.title[currentLang] || catData.title['en'];
+                const catDesc = catData.description ? (catData.description[currentLang] || catData.description['en']) : '';
 
                 const card = document.createElement('div');
-                card.className = "service-card p-4 rounded-2xl flex items-center space-x-4 group";
+                card.className = 'service-card p-4 rounded-2xl flex items-center space-x-4 group';
                 card.onclick = () => showSubServices(key);
-
                 card.innerHTML = `
                     <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-500 text-xl group-hover:bg-amber-500 group-hover:text-slate-900 transition-all duration-300 flex-shrink-0">
                         <i class="fa-solid ${catData.icon || 'fa-folder'}"></i>
@@ -325,14 +318,12 @@
                         <h3 class="text-base font-bold group-hover:text-amber-500 transition-colors">${catName}</h3>
                         <p class="text-xs opacity-70 mt-0.5">${catDesc}</p>
                     </div>
-                    <i class="fa-solid fa-chevron-right opacity-50 group-hover:text-amber-500 transition-transform group-hover:translate-x-1"></i>
-                `;
+                    <i class="fa-solid fa-chevron-right opacity-50 group-hover:text-amber-500 transition-transform group-hover:translate-x-1"></i>`;
                 container.appendChild(card);
             }
         }
 
         function showSubServices(categoryKey) {
-            selectedCategoryKey = categoryKey;
             const catData = departmentsData[categoryKey];
             if (!catData) return;
 
@@ -341,14 +332,13 @@
             heading.innerText = catData.title[currentLang] || catData.title['en'];
 
             const container = document.getElementById('sub-services-container');
-            container.innerHTML = "";
+            container.innerHTML = '';
 
-            catData.items.forEach((sub) => {
-                let subName = sub.name[currentLang] || sub.name['en'];
+            catData.items.forEach(sub => {
+                const subName = sub.name[currentLang] || sub.name['en'];
                 const card = document.createElement('div');
-                card.className = "sub-service-grid-item p-4 rounded-2xl flex items-center space-x-4 group";
+                card.className = 'sub-service-grid-item p-4 rounded-2xl flex items-center space-x-4 group';
                 card.onclick = () => window.location.href = `/feedback?service=${categoryKey}&sub_service=${sub.id}&lang=${currentLang}`;
-
                 card.innerHTML = `
                     <div class="w-13 h-13 rounded-xl bg-blue-600/30 flex items-center justify-center text-amber-500 text-xl group-hover:bg-amber-500 group-hover:text-slate-900 transition-all duration-300 flex-shrink-0">
                         <i class="fa-solid ${sub.icon}"></i>
@@ -357,8 +347,7 @@
                         <h4 class="text-base font-bold group-hover:text-amber-500 transition-colors">${subName}</h4>
                         <p class="text-xs opacity-70 mt-0.5">${t.clickToProceed}</p>
                     </div>
-                    <i class="fa-solid fa-chevron-right opacity-50 group-hover:text-amber-500 transition-transform group-hover:translate-x-1"></i>
-                `;
+                    <i class="fa-solid fa-chevron-right opacity-50 group-hover:text-amber-500 transition-transform group-hover:translate-x-1"></i>`;
                 container.appendChild(card);
             });
 
@@ -374,20 +363,12 @@
         function toggleTheme() {
             document.body.classList.toggle('light-mode');
             const isLight = document.body.classList.contains('light-mode');
-            document.getElementById('theme-icon').className = isLight ? "fa-solid fa-sun text-amber-500" : "fa-solid fa-moon text-amber-400";
+            document.getElementById('theme-icon').className = isLight ? 'fa-solid fa-sun text-amber-500' : 'fa-solid fa-moon text-amber-400';
             document.getElementById('theme-text').innerText = isLight ? t.lightMode : t.darkMode;
         }
 
-        function playVoiceGuide(text, langCode) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = langCode === 'am' ? 'am-ET' : 'en-US';
-                window.speechSynthesis.speak(utterance);
-            }
-        }
-
         function goBack() {
+            stopAllVoice();
             if (!document.getElementById('sub-services-view').classList.contains('hidden')) {
                 backToCategories();
             } else {
@@ -422,7 +403,6 @@
                     successAlert.classList.remove('hidden');
                     showToast(t.toastMsg);
                     document.getElementById('customServiceInput').value = '';
-
                     setTimeout(() => {
                         successAlert.classList.add('hidden');
                         window.location.href = '/';
@@ -438,7 +418,7 @@
         }
 
         applyTranslations();
-        fetchDepartmentsFromPSQL();
+        fetchDepartments();
     </script>
 </body>
 </html>

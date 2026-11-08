@@ -33,9 +33,7 @@
             100% { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        .page-enter {
-            animation: professionalFadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
+        .page-enter { animation: professionalFadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
         .glass-panel {
             background: rgba(15, 23, 42, 0.88);
@@ -78,9 +76,7 @@
             border: 1px solid rgba(30, 58, 138, 0.2);
         }
 
-        body.light-mode .rating-card span[class*="lbl-"] {
-            color: #1e293b !important;
-        }
+        body.light-mode .rating-card span[class*="lbl-"] { color: #1e293b !important; }
 
         .rating-card.selected {
             border-color: #fbbf24;
@@ -94,9 +90,7 @@
             border-color: #1e40af;
         }
 
-        body.light-mode .rating-card.selected span[class*="lbl-"] {
-            color: #ffffff !important;
-        }
+        body.light-mode .rating-card.selected span[class*="lbl-"] { color: #ffffff !important; }
 
         .rating-card:hover {
             transform: translateY(-15px) scale(1.08);
@@ -110,9 +104,7 @@
             border-color: #1d4ed8;
         }
 
-        body.light-mode .rating-card:hover span[class*="lbl-"] {
-            color: #ffffff !important;
-        }
+        body.light-mode .rating-card:hover span[class*="lbl-"] { color: #ffffff !important; }
 
         .rating-card:hover span.emoji, .rating-card.selected span.emoji {
             transform: scale(1.35) rotate(10deg);
@@ -141,10 +133,7 @@
             50% { transform: translateY(-6px) scale(1.15); }
         }
 
-        .success-motion-icon {
-            display: inline-block;
-            animation: smoothBounce 2s infinite ease-in-out;
-        }
+        .success-motion-icon { display: inline-block; animation: smoothBounce 2s infinite ease-in-out; }
 
         .voice-guide-container {
             display: flex;
@@ -170,11 +159,7 @@
             gap: 6px;
         }
 
-        body.light-mode .voice-btn {
-            background: #ffffff;
-            border: 1px solid rgba(30, 58, 138, 0.3);
-            color: #1e293b;
-        }
+        body.light-mode .voice-btn { background: #ffffff; border: 1px solid rgba(30, 58, 138, 0.3); color: #1e293b; }
 
         .voice-btn:hover {
             background: rgba(37, 99, 235, 0.4);
@@ -184,150 +169,92 @@
             box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
         }
 
-        body.light-mode .voice-btn:hover {
-            background: #2563eb;
-            color: #ffffff;
-        }
+        body.light-mode .voice-btn:hover { background: #2563eb; color: #ffffff; }
 
         body.light-mode #hdr-title { color: #1e3a8a; }
         body.light-mode #hdr-sub { color: #475569; }
         body.light-mode #main-heading { color: #1e3a8a; }
         body.light-mode #main-desc { color: #475569; }
         body.light-mode #lbl-comment { color: #334155; }
-        body.light-mode #user-comment {
-            background-color: #ffffff;
-            color: #0f172a;
-            border-color: #cbd5e1;
-        }
-        body.light-mode #record-btn {
-            background-color: #f1f5f9;
-            border-color: #cbd5e1;
-            color: #334155;
-        }
+        body.light-mode #user-comment { background-color: #ffffff; color: #0f172a; border-color: #cbd5e1; }
+        body.light-mode #record-btn { background-color: #f1f5f9; border-color: #cbd5e1; color: #334155; }
         body.light-mode #record-status { color: #334155; }
-        body.light-mode .mic-container-bg {
-            background-color: #f8fafc;
-            border-color: #e2e8f0;
-        }
-        body.light-mode #btn-back {
-            background-color: #e2e8f0;
-            color: #1e293b;
-            border-color: #cbd5e1;
-        }
+        body.light-mode .mic-container-bg { background-color: #f8fafc; border-color: #e2e8f0; }
+        body.light-mode #btn-back-container { background-color: #e2e8f0; color: #1e293b; border-color: #cbd5e1; }
 
-        #theme-toggle {
-            background: rgba(30, 41, 59, 0.85);
-            border: 1px solid rgba(251, 191, 36, 0.4);
-        }
-
-        body.light-mode #theme-toggle {
-            background: #ffffff;
-            border-color: rgba(30, 58, 138, 0.4);
-            color: #1e3a8a;
-        }
+        #theme-toggle { background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(251, 191, 36, 0.4); }
+        body.light-mode #theme-toggle { background: #ffffff; border-color: rgba(30, 58, 138, 0.4); color: #1e3a8a; }
     </style>
 </head>
 
 <body class="page-enter" id="body-content">
 
-    <!-- Federal Police Logo -->
+    <!-- Logo -->
     <div class="flex justify-center mb-3">
         <div class="w-16 h-16 rounded-full bg-slate-900 border-2 border-amber-400/60 flex items-center justify-center shadow-lg shadow-amber-500/10 p-1.5">
-            <img
-                src="{{ url_for('static', filename='images/police_logo.png') }}"
-                alt="Federal Police Logo"
-                class="w-full h-full object-contain"
-                onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/2/2b/Emblem_of_Ethiop3.png'"
-            >
+            <img src="{{ url_for('static', filename='images/police_logo.png') }}" alt="Federal Police Logo" class="w-full h-full object-contain"
+                 onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/2/2b/Emblem_of_Ethiop3.png'">
         </div>
     </div>
 
     <div class="text-center mb-5">
-        <h1 id="hdr-title" class="text-xl md:text-2xl font-extrabold text-amber-400 mb-1 tracking-wider">
-            የኢትዮጵያ ፌዴራል ፖሊስ
-        </h1>
-        <p id="hdr-sub" class="text-xs text-gray-300 font-medium tracking-wide">
-            Ethiopian Federal Police Service Feedback System
-        </p>
+        <h1 id="hdr-title" class="text-xl md:text-2xl font-extrabold text-amber-400 mb-1 tracking-wider"></h1>
+        <p id="hdr-sub" class="text-xs text-gray-300 font-medium tracking-wide"></p>
     </div>
 
     <div class="glass-panel p-6 md:p-10 rounded-3xl w-full max-w-4xl text-center">
 
         <!-- Dark / Light Mode Toggle -->
-        <button
-            id="theme-toggle"
-            type="button"
-            onclick="toggleTheme()"
-            class="absolute top-4 right-4 text-amber-400 font-semibold px-3 py-1.5 rounded-xl transition-all duration-300 flex items-center space-x-2 shadow-md hover:scale-105 z-10 text-xs"
-        >
+        <button id="theme-toggle" type="button" onclick="toggleTheme()"
+                class="absolute top-4 right-4 text-amber-400 font-semibold px-3 py-1.5 rounded-xl transition-all duration-300 flex items-center space-x-2 shadow-md hover:scale-105 z-10 text-xs">
             <i id="theme-icon" class="fa-solid fa-moon text-sm"></i>
             <span id="theme-text">Dark Mode</span>
         </button>
 
         <!-- Heading -->
-        <div id="welcome-section" class="mb-6">
-            <h2 id="main-heading" class="text-lg md:text-xl font-extrabold mb-2 text-amber-300 tracking-wide">
-                በተሰጠዎት አገልግሎት ምን ያህል ረክተዋል?
-            </h2>
-            <p id="main-desc" class="text-xs text-gray-300 mb-6 max-w-lg mx-auto leading-relaxed">
-                እባክዎ የተሰማዎትን እርካታ ከታች ከሚገኙት ስሜቶች አንዱን በመምረጥ በዝግታ ይግለጹን።
-            </p>
+        <div class="mb-6">
+            <h2 id="main-heading" class="text-lg md:text-xl font-extrabold mb-2 text-amber-300 tracking-wide"></h2>
+            <p id="main-desc" class="text-xs text-gray-300 mb-6 max-w-lg mx-auto leading-relaxed"></p>
         </div>
 
         <!-- Rating Emojis -->
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             <div onclick="selectRating('1')" id="rate-1" class="rating-card drop-anim-1 p-5 rounded-2xl flex flex-col items-center justify-center space-y-2">
                 <span class="emoji text-4xl md:text-5xl">😡</span>
-                <span class="lbl-1 font-bold text-xs text-white tracking-wide">በጣም አላረኩም</span>
+                <span class="lbl-1 font-bold text-xs text-white tracking-wide"></span>
             </div>
-
             <div onclick="selectRating('2')" id="rate-2" class="rating-card drop-anim-2 p-5 rounded-2xl flex flex-col items-center justify-center space-y-2">
                 <span class="emoji text-4xl md:text-5xl">🙁</span>
-                <span class="lbl-2 font-bold text-xs text-white tracking-wide">አላረኩም</span>
+                <span class="lbl-2 font-bold text-xs text-white tracking-wide"></span>
             </div>
-
             <div onclick="selectRating('3')" id="rate-3" class="rating-card drop-anim-3 p-5 rounded-2xl flex flex-col items-center justify-center space-y-2">
                 <span class="emoji text-4xl md:text-5xl">😐</span>
-                <span class="lbl-3 font-bold text-xs text-white tracking-wide">መካከለኛ</span>
+                <span class="lbl-3 font-bold text-xs text-white tracking-wide"></span>
             </div>
-
             <div onclick="selectRating('4')" id="rate-4" class="rating-card drop-anim-4 p-5 rounded-2xl flex flex-col items-center justify-center space-y-2">
                 <span class="emoji text-4xl md:text-5xl">😊</span>
-                <span class="lbl-4 font-bold text-xs text-white tracking-wide">ረክቻለሁ</span>
+                <span class="lbl-4 font-bold text-xs text-white tracking-wide"></span>
             </div>
-
             <div onclick="selectRating('5')" id="rate-5" class="rating-card drop-anim-5 p-5 rounded-2xl flex flex-col items-center justify-center space-y-2">
                 <span class="emoji text-4xl md:text-5xl">😍</span>
-                <span class="lbl-5 font-bold text-xs text-white tracking-wide">በጣም ረክቻለሁ</span>
+                <span class="lbl-5 font-bold text-xs text-white tracking-wide"></span>
             </div>
         </div>
 
         <!-- Comment & Voice Recorder -->
         <div class="mb-6 text-left space-y-3">
             <div>
-                <label id="lbl-comment" class="block text-xs font-semibold text-gray-300 mb-1">
-                    አስተያየትዎን በጽሁፍ ይጻፉ (አማራጭ):
-                </label>
-
-                <textarea
-                    id="user-comment"
-                    rows="2"
-                    placeholder="ስለተሰጠው አገልግሎትዎ ሃሳብ ወይም አስተያየት ይጻፉ..."
-                    class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-400 transition-all"
-                ></textarea>
+                <label id="lbl-comment" for="user-comment" class="block text-xs font-semibold text-gray-300 mb-1"></label>
+                <textarea id="user-comment" rows="2"
+                    class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-400 transition-all"></textarea>
             </div>
 
             <div class="mic-container-bg flex items-center justify-between bg-slate-900/60 p-3 rounded-xl border border-slate-800">
                 <div class="flex items-center space-x-3">
-                    <button
-                        type="button"
-                        id="record-btn"
-                        class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl flex items-center space-x-2 border border-slate-600 transition-all text-xs"
-                    >
+                    <button type="button" id="record-btn"
+                        class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl flex items-center space-x-2 border border-slate-600 transition-all text-xs">
                         <i id="mic-icon" class="fa-solid fa-microphone text-amber-400 text-sm"></i>
-                        <span id="record-status" class="font-semibold text-gray-300">
-                            ድምጽ ለመቅረጽ ማይኩን ይጫኑ
-                        </span>
+                        <span id="record-status" class="font-semibold text-gray-300"></span>
                     </button>
                 </div>
             </div>
@@ -341,43 +268,28 @@
 
         <!-- Navigation / Submit -->
         <div class="flex items-center justify-between mb-6">
-            <button
-                onclick="goBack()"
-                id="btn-back-container"
-                type="button"
-                class="bg-slate-800/90 hover:bg-slate-700 text-gray-300 font-semibold px-4 py-2 rounded-xl border border-slate-600 transition-all duration-500 flex items-center space-x-2 text-xs hover:scale-105"
-            >
+            <button onclick="goBack()" id="btn-back-container" type="button"
+                class="bg-slate-800/90 hover:bg-slate-700 text-gray-300 font-semibold px-4 py-2 rounded-xl border border-slate-600 transition-all duration-500 flex items-center space-x-2 text-xs hover:scale-105">
                 <i class="fa-solid fa-arrow-left"></i>
-                <span id="btn-back">ወደ አገልግሎቶች ተመለስ</span>
+                <span id="btn-back"></span>
             </button>
 
-            <button
-                onclick="validateAndSubmit()"
-                type="button"
-                class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl border border-amber-300/50 transition-all duration-300 flex items-center space-x-2 text-xs shadow-lg shadow-amber-500/20 hover:scale-105"
-            >
-                <span id="btn-submit">መዝግብ & ጨርስ</span>
+            <button id="submit-btn" onclick="validateAndSubmit()" type="button"
+                class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl border border-amber-300/50 transition-all duration-300 flex items-center space-x-2 text-xs shadow-lg shadow-amber-500/20 hover:scale-105">
+                <span id="btn-submit"></span>
                 <i class="fa-solid fa-paper-plane"></i>
             </button>
         </div>
 
         <!-- Voice Guides -->
         <div class="voice-guide-container">
-            <button
-                type="button"
-                onclick="playGttsGuide('እባክዎ የተሰማዎትን የእርካታ ደረጃ ይምረጡና አስተያየትዎን ያስቀምጡ።', 'am')"
-                class="voice-btn"
-            >
-                <i class="fa-solid fa-volume-high text-amber-400"></i>
-                Amharic Voice Guide
+            <!-- Amharic: your recordings (Rate, then Comment) -->
+            <button type="button" onclick="playAmharic('Rate', 'Comment')" class="voice-btn">
+                <i class="fa-solid fa-volume-high text-amber-400"></i> Amharic Voice Guide
             </button>
-            <button
-                type="button"
-                onclick="readFullUIEnglish()"
-                class="voice-btn"
-            >
-                <i class="fa-solid fa-volume-high text-amber-400"></i>
-                English Voice Guide
+            <!-- English: AI voice -->
+            <button type="button" onclick="readFullUIEnglish()" class="voice-btn">
+                <i class="fa-solid fa-volume-high text-amber-400"></i> English Voice Guide
             </button>
         </div>
     </div>
@@ -386,36 +298,27 @@
     <div id="success-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-500">
         <div id="success-card" class="bg-slate-900 border-2 border-amber-400/80 rounded-3xl p-8 max-w-sm w-full text-center transform scale-90 transition-transform duration-500 shadow-2xl">
             <div class="text-6xl mb-4 success-motion-icon">✨</div>
-            <h3 id="success-title-text" class="text-xl font-bold text-amber-400 mb-2">እናመሰግናለን! 😊</h3>
-            <p id="success-msg-text" class="text-xs text-gray-300 mb-6 leading-relaxed">
-                አስተያየትዎ በጥሩ ሁኔታ ተመዝግቧል።
-            </p>
+            <h3 id="success-title-text" class="text-xl font-bold text-amber-400 mb-2"></h3>
+            <p id="success-msg-text" class="text-xs text-gray-300 mb-6 leading-relaxed"></p>
         </div>
     </div>
 
+    <script src="/static/js/voice.js"></script>
     <script>
-        /* -------------------------------------------------------
-           URL PARAMETERS
-        ------------------------------------------------------- */
+        /* ---------- URL parameters ---------- */
         const urlParams = new URLSearchParams(window.location.search);
         const lang = urlParams.get('lang') || 'am';
         const service = urlParams.get('service') || 'General';
         const subServiceParam = urlParams.get('sub_service') || '';
 
-        /* -------------------------------------------------------
-           TRANSLATIONS
-        ------------------------------------------------------- */
+        /* ---------- Translations ---------- */
         const translations = {
             en: {
                 hdrTitle: "ETHIOPIAN FEDERAL POLICE",
                 hdrSub: "Citizen Feedback Portal",
                 mainHeading: "How satisfied are you with our service?",
                 mainDesc: "Please take a moment to select your rating emoji below and share your thoughts.",
-                l1: "Very Dissatisfied",
-                l2: "Dissatisfied",
-                l3: "Neutral",
-                l4: "Satisfied",
-                l5: "Very Satisfied",
+                l1: "Very Dissatisfied", l2: "Dissatisfied", l3: "Neutral", l4: "Satisfied", l5: "Very Satisfied",
                 lblComment: "Write your feedback (Optional):",
                 commentPlaceholder: "Type your comment or thoughts about the service here...",
                 recStatus: "Click mic to record voice",
@@ -427,17 +330,12 @@
                 successTitle: "Thank You! 😊",
                 successDesc: "Your feedback has been successfully recorded ✅"
             },
-
             am: {
                 hdrTitle: "የኢትዮጵያ ፌዴራል ፖሊስ",
                 hdrSub: "የህዝብ አስተያየት መቀበያ ስርዓት",
                 mainHeading: "በተሰጠዎት አገልግሎት ምን ያህል ረክተዋል?",
                 mainDesc: "እባክዎ የተሰማዎትን እርካታ ከታች ከሚገኙት ስሜቶች አንዱን በመምረጥ በዝግታ ይግለጹን።",
-                l1: "በጣም አልረካሁም",
-                l2: "አልረካሁም",
-                l3: "መካከለኛ",
-                l4: "ረክቻለሁ",
-                l5: "በጣም ረክቻለሁ",
+                l1: "በጣም አልረካሁም", l2: "አልረካሁም", l3: "መካከለኛ", l4: "ረክቻለሁ", l5: "በጣም ረክቻለሁ",
                 lblComment: "አስተያየትዎን በጽሁፍ ይጻፉ (አማራጭ):",
                 commentPlaceholder: "ስለተሰጠው አገልግሎትዎ ሃሳብ ወይም አስተያየት ይጻፉ...",
                 recStatus: "ድምጽ ለመቅረጽ ማይኩን ይጫኑ",
@@ -448,23 +346,18 @@
                 alertMismatch: "የጻፉት አስተያየት ከሰጡት የእርካታ ደረጃ ጋር አይጣጣምም! ‼️",
                 successTitle: "እናመሰግናለን! 😊",
                 successDesc: "አስተያየትዎ በጥሩ ሁኔታ ተመዝግቧል ✅"
-            },
+            }
         };
 
         const t = translations[lang] || translations.en;
 
-        /* -------------------------------------------------------
-           APPLY TRANSLATIONS
-        ------------------------------------------------------- */
+        /* ---------- Apply translations ---------- */
+        document.documentElement.lang = translations[lang] ? lang : 'en';
         document.getElementById('hdr-title').textContent = t.hdrTitle;
         document.getElementById('hdr-sub').textContent = t.hdrSub;
         document.getElementById('main-heading').textContent = t.mainHeading;
         document.getElementById('main-desc').textContent = t.mainDesc;
-        document.querySelector('.lbl-1').textContent = t.l1;
-        document.querySelector('.lbl-2').textContent = t.l2;
-        document.querySelector('.lbl-3').textContent = t.l3;
-        document.querySelector('.lbl-4').textContent = t.l4;
-        document.querySelector('.lbl-5').textContent = t.l5;
+        [1, 2, 3, 4, 5].forEach(n => { document.querySelector(`.lbl-${n}`).textContent = t[`l${n}`]; });
         document.getElementById('lbl-comment').textContent = t.lblComment;
         document.getElementById('user-comment').placeholder = t.commentPlaceholder;
         document.getElementById('record-status').textContent = t.recStatus;
@@ -473,461 +366,176 @@
         document.getElementById('success-title-text').textContent = t.successTitle;
         document.getElementById('success-msg-text').textContent = t.successDesc;
 
-        /* -------------------------------------------------------
-           THEME TOGGLE
-        ------------------------------------------------------- */
+        /* ---------- Theme toggle ---------- */
         function toggleTheme() {
-            const body = document.body;
-            const icon = document.getElementById('theme-icon');
-            const text = document.getElementById('theme-text');
-
-            body.classList.toggle('light-mode');
-
-            if (body.classList.contains('light-mode')) {
-                icon.classList.remove('fa-moon');
-                icon.classList.add('fa-sun');
-                text.textContent = 'Light Mode';
-            } else {
-                icon.classList.remove('fa-sun');
-                icon.classList.add('fa-moon');
-                text.textContent = 'Dark Mode';
-            }
+            const isLight = document.body.classList.toggle('light-mode');
+            document.getElementById('theme-icon').className = isLight ? 'fa-solid fa-sun text-sm' : 'fa-solid fa-moon text-sm';
+            document.getElementById('theme-text').textContent = isLight ? 'Light Mode' : 'Dark Mode';
         }
 
-        /* -------------------------------------------------------
-           RATING SELECTION
-        ------------------------------------------------------- */
+        /* ---------- Rating selection ---------- */
         let selectedScore = '';
 
         function selectRating(score) {
             selectedScore = String(score);
-
-            for (let i = 1; i <= 5; i++) {
-                const card = document.getElementById(`rate-${i}`);
-                if (card) {
-                    card.classList.remove('selected');
-                }
-            }
-
-            const selectedCard = document.getElementById(`rate-${selectedScore}`);
-            if (selectedCard) {
-                selectedCard.classList.add('selected');
-            }
-
+            for (let i = 1; i <= 5; i++) document.getElementById(`rate-${i}`).classList.remove('selected');
+            document.getElementById(`rate-${selectedScore}`).classList.add('selected');
             document.getElementById('alert-box').classList.add('hidden');
         }
 
-        /* -------------------------------------------------------
-           ENGLISH VOICE GUIDE
-        ------------------------------------------------------- */
+        /* ---------- English voice guide (AI voice) ---------- */
         function readFullUIEnglish() {
-            if (!('speechSynthesis' in window)) {
-                alert("Your browser does not support text-to-speech synthesis.");
-                return;
-            }
-
-            window.speechSynthesis.cancel();
-
-            const enTrans = translations.en;
-
-            const speechText = `
-                Welcome to ${enTrans.hdrTitle}, ${enTrans.hdrSub}.
-                Question: ${enTrans.mainHeading}.
-                Instructions: ${enTrans.mainDesc}.
-                The available rating choices are:
-                Option 1: ${enTrans.l1}.
-                Option 2: ${enTrans.l2}.
-                Option 3: ${enTrans.l3}.
-                Option 4: ${enTrans.l4}.
-                Option 5: ${enTrans.l5}.
-                Feedback field: ${enTrans.lblComment}.
-                You can also click the microphone button to record your voice feedback.
-                Action buttons: Click ${enTrans.btnSubmit} to submit,
-                or click ${enTrans.btnBack} to return.
-            `;
-
-            const utterance = new SpeechSynthesisUtterance(speechText);
-            utterance.lang = 'en-US';
-            utterance.rate = 0.92;
-            utterance.pitch = 1.0;
-
-            window.speechSynthesis.speak(utterance);
+            playEnglish(`
+                Rate your satisfaction from 1 to 5 stars, where 1 is Very Poor and 5 is Excellent.
+                Write your comment or suggestion about the service you received.
+                You can also press the microphone button and record your feedback.
+                Please check your information before submitting.
+                Press Submit Feedback to send your response.
+            `);
         }
 
-        /* -------------------------------------------------------
-           SPEECH-TO-TEXT
-        ------------------------------------------------------- */
+        /* ---------- Speech-to-text (comment box) ---------- */
         const micBtn = document.getElementById('record-btn');
         const micIcon = document.getElementById('mic-icon');
         const recordStatus = document.getElementById('record-status');
         const commentInput = document.getElementById('user-comment');
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-        if (micBtn && commentInput) {
-            const SpeechRecognition =
-                window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.lang = (lang === 'am') ? 'am-ET' : 'en-US';
+            recognition.continuous = false;
+            recognition.interimResults = true;
 
-            if (SpeechRecognition) {
-                const recognition = new SpeechRecognition();
+            let finalTranscript = '';
 
-                recognition.lang =
-                    lang === 'am'
-                        ? 'am-ET'
-                                : lang === 'en'
-                                ? 'en-US'
-                                : 'en-US';
-
-                recognition.continuous = false;
-                recognition.interimResults = true;
-
-                let finalTranscript = '';
-
-                micBtn.addEventListener('click', () => {
-                    try {
-                        finalTranscript = '';
-                        recognition.start();
-                    } catch (error) {
-                        console.log("Recognition already active:", error);
-                    }
-                });
-
-                recognition.onstart = () => {
-                    recordStatus.textContent = t.recActive;
-                    micBtn.classList.add('recording-active');
-
-                    micIcon.classList.remove(
-                        'fa-microphone',
-                        'text-amber-400'
-                    );
-
-                    micIcon.classList.add(
-                        'fa-stop',
-                        'text-white'
-                    );
-                };
-
-                recognition.onresult = (event) => {
-                    let interim = '';
-
-                    for (
-                        let i = event.resultIndex;
-                        i < event.results.length;
-                        i++
-                    ) {
-                        if (event.results[i].isFinal) {
-                            finalTranscript +=
-                                event.results[i][0].transcript;
-                        } else {
-                            interim +=
-                                event.results[i][0].transcript;
-                        }
-                    }
-
-                    if (finalTranscript) {
-                        commentInput.value = commentInput.value
-                            ? `${commentInput.value} ${finalTranscript}`
-                            : finalTranscript;
-                    }
-                };
-
-                recognition.onerror = (event) => {
-                    console.error(
-                        "Speech recognition error:",
-                        event.error
-                    );
-                    resetMicButton();
-                };
-
-                recognition.onend = () => {
-                    resetMicButton();
-                };
-
-                function resetMicButton() {
-                    recordStatus.textContent = t.recStatus;
-
-                    micBtn.classList.remove('recording-active');
-
-                    micIcon.classList.remove(
-                        'fa-stop',
-                        'text-white'
-                    );
-
-                    micIcon.classList.add(
-                        'fa-microphone',
-                        'text-amber-400'
-                    );
-                }
-            } else {
-                micBtn.style.display = 'none';
-            }
-        }
-
-        /* -------------------------------------------------------
-           BACKEND gTTS VOICE GUIDE
-        ------------------------------------------------------- */
-        async function playGttsGuide(text, langCode) {
-            try {
-                const response = await fetch('/text-to-speech', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        text: text,
-                        lang: langCode
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(
-                        'Failed to generate audio via gTTS.'
-                    );
-                }
-
-                const blob = await response.blob();
-                const audioUrl = URL.createObjectURL(blob);
-                const audio = new Audio(audioUrl);
-
-                audio.addEventListener(
-                    'ended',
-                    () => URL.revokeObjectURL(audioUrl),
-                    { once: true }
-                );
-
-                await audio.play();
-            } catch (error) {
-                console.error("gTTS Error:", error);
-            }
-        }
-
-        /* -------------------------------------------------------
-           FEEDBACK VALIDATION & SUBMISSION
-        ------------------------------------------------------- */
-        async function validateAndSubmit() {
-            const alertBox = document.getElementById('alert-box');
-            const alertText = document.getElementById('alert-text');
-            const commentElement = document.getElementById('user-comment');
-
-            if (!selectedScore) {
-                alertText.textContent = t.errRating;
-                alertBox.classList.remove('hidden');
-                return;
-            }
-
-            const rawComment = commentElement.value.trim();
-            const comment = rawComment.toLowerCase();
-
-            const negativeKeywords = [
-                'አልረካሁም',
-                'አላረካሁም',
-                'መጥፎ',
-                'ክፉ',
-                'አይሰራም',
-                'ዘግዩ',
-                'ዘግይቷል',
-                'ችግር',
-                'ደስ አላለኝም',
-                'አዘንኩ',
-                'አልወደድኩ',
-                'አልተመቸኝም',
-                'አያስደስትም',
-                'አይረባም',
-                'ጥሩ አይደለም',
-                'አሪፍ አይደለም',
-                'ቆንጆ አይደለም',
-                'አልተሰራም',
-                'አልተስተናገድኩም',
-                'hin quufne',
-                'rakkoo',
-                'gadhee',
-                "taa'uu dhabuu",
-                'ciniinsuu',
-                'hin jaalanne',
-                'hin hojjenne',
-                'ኣይዕገብኩን',
-                'ፉሉይ',
-                'ሕማቕ',
-                'ጸገም',
-                'ዘይተደለየ',
-                'ኣይፈቶኹዎን',
-                'ኣይሰርሕን',
-                'bad',
-                'worst',
-                'poor',
-                'useless',
-                'terrible',
-                'hate',
-                'angry',
-                'not satisfied',
-                'disappointed',
-                'not good',
-                'it is not good',
-                "it's not good"
-            ];
-
-            const positiveKeywords = [
-                'ረክቻለሁ',
-                'አመሰግናለሁ',
-                'ጥሩ',
-                'አሪፍ',
-                'ፈጣን',
-                'ደስ ይላል',
-                'ተመችቶኛል',
-                'ቆንጆ',
-                'በጣም ጥሩ',
-                'ድንቅ',
-                'quufeera',
-                'bayyee gaarii',
-                'galatoomaa',
-                'ayyaana',
-                "milkaa'ina",
-                "baay'ee gaarii",
-                'bareedaa',
-                'ዕጉብ እየ',
-                'የቐንየለይ',
-                'ጽቡቕ',
-                'ቅኑዕ',
-                'ደስ ዝብል',
-                'ብሉጽ',
-                'ጽቡቅ',
-                'good',
-                'great',
-                'excellent',
-                'satisfied',
-                'happy',
-                'thank',
-                'wonderful',
-                'nice',
-                'awesome'
-            ];
-
-            const hasNegative = negativeKeywords.some(
-                word => comment.includes(word)
-            );
-
-            const hasPositive = positiveKeywords.some(
-                word => comment.includes(word)
-            );
-
-            if (
-                (selectedScore === '4' || selectedScore === '5') &&
-                hasNegative
-            ) {
-                alertText.textContent = t.alertMismatch;
-                alertBox.classList.remove('hidden');
-                return;
-            }
-
-            if (
-                (selectedScore === '1' || selectedScore === '2') &&
-                hasPositive &&
-                !hasNegative
-            ) {
-                alertText.textContent = t.alertMismatch;
-                alertBox.classList.remove('hidden');
-                return;
-            }
-
-            const emojiMap = {
-                '1': '😡',
-                '2': '🙁',
-                '3': '😐',
-                '4': '😊',
-                '5': '😍'
+            const resetMicButton = () => {
+                recordStatus.textContent = t.recStatus;
+                micBtn.classList.remove('recording-active');
+                micIcon.classList.remove('fa-stop', 'text-white');
+                micIcon.classList.add('fa-microphone', 'text-amber-400');
             };
 
-            const selectedEmoji =
-                emojiMap[selectedScore] || '😊';
+            micBtn.addEventListener('click', () => {
+                stopAllVoice();   // don't let the guide talk over the microphone
+                try {
+                    finalTranscript = '';
+                    recognition.start();
+                } catch (error) {
+                    console.log('Recognition already active:', error);
+                }
+            });
+
+            recognition.onstart = () => {
+                recordStatus.textContent = t.recActive;
+                micBtn.classList.add('recording-active');
+                micIcon.classList.remove('fa-microphone', 'text-amber-400');
+                micIcon.classList.add('fa-stop', 'text-white');
+            };
+
+            recognition.onresult = (event) => {
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+                }
+                if (finalTranscript) {
+                    commentInput.value = commentInput.value ? `${commentInput.value} ${finalTranscript}` : finalTranscript;
+                    finalTranscript = '';
+                }
+            };
+
+            recognition.onerror = (event) => { console.error('Speech recognition error:', event.error); resetMicButton(); };
+            recognition.onend = resetMicButton;
+        } else {
+            micBtn.style.display = 'none';
+        }
+
+        /* ---------- Validation & submission ---------- */
+        const negativeKeywords = [
+            'አልረካሁም', 'አላረካሁም', 'መጥፎ', 'ክፉ', 'አይሰራም', 'ዘግዩ', 'ዘግይቷል', 'ችግር', 'ደስ አላለኝም', 'አዘንኩ',
+            'አልወደድኩ', 'አልተመቸኝም', 'አያስደስትም', 'አይረባም', 'ጥሩ አይደለም', 'አሪፍ አይደለም', 'ቆንጆ አይደለም',
+            'አልተሰራም', 'አልተስተናገድኩም',
+            'hin quufne', 'rakkoo', 'gadhee', "taa'uu dhabuu", 'ciniinsuu', 'hin jaalanne', 'hin hojjenne',
+            'ኣይዕገብኩን', 'ፉሉይ', 'ሕማቕ', 'ጸገም', 'ዘይተደለየ', 'ኣይፈቶኹዎን', 'ኣይሰርሕን',
+            'bad', 'worst', 'poor', 'useless', 'terrible', 'hate', 'angry', 'not satisfied', 'disappointed',
+            'not good', 'it is not good', "it's not good"
+        ];
+
+        const positiveKeywords = [
+            'ረክቻለሁ', 'አመሰግናለሁ', 'ጥሩ', 'አሪፍ', 'ፈጣን', 'ደስ ይላል', 'ተመችቶኛል', 'ቆንጆ', 'በጣም ጥሩ', 'ድንቅ',
+            'quufeera', 'bayyee gaarii', 'galatoomaa', 'ayyaana', "milkaa'ina", "baay'ee gaarii", 'bareedaa',
+            'ዕጉብ እየ', 'የቐንየለይ', 'ጽቡቕ', 'ቅኑዕ', 'ደስ ዝብል', 'ብሉጽ', 'ጽቡቅ',
+            'good', 'great', 'excellent', 'satisfied', 'happy', 'thank', 'wonderful', 'nice', 'awesome'
+        ];
+
+        const emojiMap = { '1': '😡', '2': '🙁', '3': '😐', '4': '😊', '5': '😍' };
+
+        function showAlert(message) {
+            document.getElementById('alert-text').textContent = message;
+            document.getElementById('alert-box').classList.remove('hidden');
+        }
+
+        async function validateAndSubmit() {
+            const alertBox = document.getElementById('alert-box');
+            const submitButton = document.getElementById('submit-btn');
+
+            if (!selectedScore) return showAlert(t.errRating);
+
+            const rawComment = commentInput.value.trim();
+            const comment = rawComment.toLowerCase();
+            const hasNegative = negativeKeywords.some(word => comment.includes(word));
+            const hasPositive = positiveKeywords.some(word => comment.includes(word));
+
+            if ((selectedScore === '4' || selectedScore === '5') && hasNegative) return showAlert(t.alertMismatch);
+            if ((selectedScore === '1' || selectedScore === '2') && hasPositive && !hasNegative) return showAlert(t.alertMismatch);
 
             alertBox.classList.add('hidden');
-
-            const submitButton = document.querySelector(
-                'button[onclick="validateAndSubmit()"]'
-            );
-
-            if (submitButton) {
-                submitButton.disabled = true;
-                submitButton.classList.add(
-                    'opacity-60',
-                    'cursor-not-allowed'
-                );
-            }
+            submitButton.disabled = true;
+            submitButton.classList.add('opacity-60', 'cursor-not-allowed');
 
             try {
                 const response = await fetch('/submit-feedback', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         service: service,
-                        sub_service:
-                            subServiceParam || 'General Service',
-                        rating: selectedEmoji,
+                        sub_service: subServiceParam || 'General Service',
+                        rating: emojiMap[selectedScore] || '😊',
                         comment: rawComment
                     })
                 });
 
-                const data = await response.json().catch(
-                    () => ({})
-                );
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.message || 'Submission error. Please try again.');
 
-                if (!response.ok) {
-                    throw new Error(
-                        data.message ||
-                        'Submission error. Please try again.'
-                    );
-                }
-
-                console.log("Success:", data);
-
-                const successModal =
-                    document.getElementById('success-modal');
-
-                const successCard =
-                    document.getElementById('success-card');
-
+                // Show the thank-you modal
+                const successModal = document.getElementById('success-modal');
+                const successCard = document.getElementById('success-card');
                 successModal.classList.remove('hidden');
-
                 setTimeout(() => {
                     successModal.style.opacity = '1';
                     successCard.style.transform = 'scale(1)';
                 }, 50);
 
-                setTimeout(() => {
-                    window.location.href = `/?lang=${encodeURIComponent(lang)}`;
-                }, 2500);
+                // Amharic: play your "Thanks" recording. Wait for it to finish (min 2.5s, max 8s) before leaving.
+                const thanks = (lang === 'am') ? playAmharic('Thanks') : Promise.resolve();
+                const minWait = new Promise(resolve => setTimeout(resolve, 2500));
+                const maxWait = new Promise(resolve => setTimeout(resolve, 8000));
+                await Promise.race([Promise.all([thanks, minWait]), maxWait]);
+
+                window.location.href = `/?lang=${encodeURIComponent(lang)}`;
 
             } catch (error) {
-                console.error(
-                    "Error submitting feedback:",
-                    error
-                );
-
-                alertText.textContent =
-                    error.message ||
-                    "Submission error. Please try again.";
-
-                alertBox.classList.remove('hidden');
-
-                if (submitButton) {
-                    submitButton.disabled = false;
-                    submitButton.classList.remove(
-                        'opacity-60',
-                        'cursor-not-allowed'
-                    );
-                }
+                console.error('Error submitting feedback:', error);
+                showAlert(error.message || 'Submission error. Please try again.');
+                submitButton.disabled = false;
+                submitButton.classList.remove('opacity-60', 'cursor-not-allowed');
             }
         }
 
-        /* -------------------------------------------------------
-           NAVIGATION BACK
-        ------------------------------------------------------- */
+        /* ---------- Back ---------- */
         function goBack() {
-            const targetLanguage =
-                encodeURIComponent(lang || 'am');
-
-            window.location.href =
-                `/?lang=${targetLanguage}`;
+            stopAllVoice();
+            window.location.href = `/?lang=${encodeURIComponent(lang || 'am')}`;
         }
     </script>
 </body>

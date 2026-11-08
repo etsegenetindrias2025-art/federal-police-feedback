@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ethiopian Federal Police - Citizen Feedback System</title>
-    
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@700;900&family=Montserrat:wght@500;700;800&family=Noto+Sans+Ethiopic:wght@400;700&display=swap" rel="stylesheet">
-    
+
     <style>
         :root {
             --bg-gradient: radial-gradient(circle at center, #0f172a, #090d16, #020408);
@@ -98,11 +98,7 @@
             transition: background 0.4s ease, border-color 0.4s ease;
         }
 
-        .theme-btn-container {
-            position: absolute;
-            top: 24px;
-            right: 24px;
-        }
+        .theme-btn-container { position: absolute; top: 24px; right: 24px; }
 
         .theme-toggle-btn {
             background: var(--theme-btn-bg);
@@ -127,13 +123,7 @@
             padding-top: 10px;
         }
 
-        .logo-img {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-            margin: 0 auto 16px auto;
-            display: block;
-        }
+        .logo-img { width: 80px; height: 80px; object-fit: contain; margin: 0 auto 16px auto; display: block; }
 
         .header-title {
             font-family: 'Cinzel Decorative', 'Cinzel', serif;
@@ -167,18 +157,8 @@
             letter-spacing: 0.5px;
         }
 
-        .lang-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        @media (max-width: 540px) {
-            .lang-grid {
-                grid-template-columns: 1fr;
-            }
-        }
+        .lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+        @media (max-width: 540px) { .lang-grid { grid-template-columns: 1fr; } }
 
         .lang-card {
             background: var(--lang-card-bg);
@@ -203,18 +183,8 @@
             box-shadow: 0 12px 24px rgba(251, 191, 36, 0.2);
         }
 
-        .lang-card .main-lbl {
-            font-weight: 700;
-            font-size: 14px;
-            color: var(--lang-text-main);
-            display: block;
-            margin-bottom: 2px;
-        }
-
-        .lang-card .sub-lbl {
-            font-size: 11px;
-            color: var(--lang-text-sub);
-        }
+        .lang-card .main-lbl { font-weight: 700; font-size: 14px; color: var(--lang-text-main); display: block; margin-bottom: 2px; }
+        .lang-card .sub-lbl { font-size: 11px; color: var(--lang-text-sub); }
 
         .voice-section {
             background: var(--section-box-bg);
@@ -234,12 +204,7 @@
             color: var(--subtitle-color);
         }
 
-        .voice-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
-        }
+        .voice-buttons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 
         .voice-btn {
             background: var(--voice-btn-bg);
@@ -253,11 +218,7 @@
             transition: all 0.3s ease;
         }
 
-        .voice-btn:hover {
-            background: rgba(251, 191, 36, 0.25);
-            border-color: #fbbf24;
-            transform: translateY(-2px);
-        }
+        .voice-btn:hover { background: rgba(251, 191, 36, 0.25); border-color: #fbbf24; transform: translateY(-2px); }
 
         .footer-section {
             margin-top: 20px;
@@ -272,7 +233,7 @@
 <body>
 
     <div class="main-card">
-        
+
         <div class="theme-btn-container">
             <button onclick="toggleTheme()" id="theme-toggle" class="theme-toggle-btn" type="button">
                 <i class="fa-solid fa-moon" id="theme-icon"></i>
@@ -305,8 +266,10 @@
         <div class="voice-section">
             <p class="voice-title">Audio Assistance / የድምጽ እርዳታ</p>
             <div class="voice-buttons">
-                <button onclick="readFullPageEnglish()" class="voice-btn" type="button">🔊 English</button>
-                <button onclick="playVoiceGuide('እንኳን ወደ ኢትዮጵያ ፌዴራል ፖሊስ የህዝብ አስተያየት መስጫ ስርዓት በደህና መጡ።', 'am')" class="voice-btn" type="button">🔊 አማርኛ</button>
+                <!-- English: AI voice -->
+                <button onclick="playEnglish('Welcome to the Ethiopian Federal Police Customer Satisfaction Monitoring System. Thank you for sharing your feedback. Please select your preferred language.')" class="voice-btn" type="button">🔊 English</button>
+                <!-- Amharic: your recordings (Welcome, then Language) -->
+                <button onclick="playAmharic('Welcome', 'Language')" class="voice-btn" type="button">🔊 አማርኛ</button>
             </div>
         </div>
 
@@ -316,21 +279,14 @@
 
     </div>
 
+    <script src="/static/js/voice.js"></script>
     <script>
         window.addEventListener('DOMContentLoaded', () => {
-            const savedTheme = localStorage.getItem('welcome-theme');
-            if (savedTheme === 'light') {
-                applyLightTheme();
-            }
+            if (localStorage.getItem('welcome-theme') === 'light') applyLightTheme();
         });
 
         function toggleTheme() {
-            const isLight = document.body.classList.contains('light-theme');
-            if (isLight) {
-                applyDarkTheme();
-            } else {
-                applyLightTheme();
-            }
+            document.body.classList.contains('light-theme') ? applyDarkTheme() : applyLightTheme();
         }
 
         function applyLightTheme() {
@@ -345,21 +301,6 @@
             document.getElementById('theme-icon').className = 'fa-solid fa-moon';
             document.getElementById('theme-text').innerText = 'Dark Mode';
             localStorage.setItem('welcome-theme', 'dark');
-        }
-
-        function playVoiceGuide(text, lang) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = (lang === 'am') ? 'am-ET' : 'en-US';
-                utterance.rate = 0.9;
-                window.speechSynthesis.speak(utterance);
-            }
-        }
-
-        function readFullPageEnglish() {
-            const fullText = "Welcome to the Ethiopian Federal Police Citizen Feedback System. Please select your preferred language to begin.";
-            playVoiceGuide(fullText, 'en');
         }
     </script>
 </body>
