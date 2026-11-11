@@ -220,23 +220,23 @@
         <!-- Rating Emojis -->
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             <div onclick="selectRating('1')" id="rate-1" class="rating-card drop-anim-1 p-5 rounded-2xl flex flex-col items-center justify-center space-y-2">
-                <span class="emoji text-4xl md:text-5xl">😡</span>
+                <span class="emoji text-4xl md:text-5xl">1😡</span>
                 <span class="lbl-1 font-bold text-xs text-white tracking-wide"></span>
             </div>
             <div onclick="selectRating('2')" id="rate-2" class="rating-card drop-anim-2 p-5 rounded-2xl flex flex-col items-center justify-center space-y-2">
-                <span class="emoji text-4xl md:text-5xl">🙁</span>
+                <span class="emoji text-4xl md:text-5xl">2🙁</span>
                 <span class="lbl-2 font-bold text-xs text-white tracking-wide"></span>
             </div>
             <div onclick="selectRating('3')" id="rate-3" class="rating-card drop-anim-3 p-5 rounded-2xl flex flex-col items-center justify-center space-y-2">
-                <span class="emoji text-4xl md:text-5xl">😐</span>
+                <span class="emoji text-4xl md:text-5xl">3😐</span>
                 <span class="lbl-3 font-bold text-xs text-white tracking-wide"></span>
             </div>
             <div onclick="selectRating('4')" id="rate-4" class="rating-card drop-anim-4 p-5 rounded-2xl flex flex-col items-center justify-center space-y-2">
-                <span class="emoji text-4xl md:text-5xl">😊</span>
+                <span class="emoji text-4xl md:text-5xl">4😊</span>
                 <span class="lbl-4 font-bold text-xs text-white tracking-wide"></span>
             </div>
             <div onclick="selectRating('5')" id="rate-5" class="rating-card drop-anim-5 p-5 rounded-2xl flex flex-col items-center justify-center space-y-2">
-                <span class="emoji text-4xl md:text-5xl">😍</span>
+                <span class="emoji text-4xl md:text-5xl">5😍</span>
                 <span class="lbl-5 font-bold text-xs text-white tracking-wide"></span>
             </div>
         </div>
@@ -284,8 +284,12 @@
         <!-- Voice Guides -->
         <div class="voice-guide-container">
             <!-- Amharic: your recordings (Rate, then Comment) -->
-            <button type="button" onclick="playAmharic('Rate', 'Comment')" class="voice-btn">
+            <button type="button" onclick="playVoice('am', 'rate', 'comment')" class="voice-btn">
                 <i class="fa-solid fa-volume-high text-amber-400"></i> Amharic Voice Guide
+            </button>
+            <!-- Afan Oromo: your recordings (Rate if available, then Comment or) -->
+            <button type="button" onclick="playVoice('om', 'rate', 'comment')" class="voice-btn">
+                <i class="fa-solid fa-volume-high text-amber-400"></i> Afan Oromo Voice Guide
             </button>
             <!-- English: AI voice -->
             <button type="button" onclick="readFullUIEnglish()" class="voice-btn">
@@ -306,10 +310,24 @@
     <script>
         /* ------------------------------------------------------------
            VOICE GUIDE  (built into this page, no extra file needed)
-           - Amharic : your own recordings in static/audio/Am/*.m4a
-           - English : browser AI voice (speechSynthesis)
+           - Amharic    : your recordings in static/audio/Am/
+           - Afan Oromo : your recordings in static/audio/afan.or/
+           - English    : browser AI voice (speechSynthesis)
+
+           To change a recording, only edit the file names below
+           (write the name without ".m4a").
         ------------------------------------------------------------ */
-        const AUDIO_BASE = '/static/audio/Am/';   // keep the capital "A" in "Am"
+        const VOICE = {
+            am: {
+                folder: '/static/audio/Am/',
+                files: { finger: 'Finger am', language: 'Language', service: 'Service-1', rate: 'Rate', comment: 'Comment', thanks: 'Thanks-1' }
+            },
+            om: {
+                folder: '/static/audio/afan.or/',
+                files: { finger: 'Fingure', language: 'Kuankua', service: 'Service or', comment: 'Comment or', thanks: 'Th-1' }   // no "rate" recording yet
+            }
+        };
+
         let currentAudio = null;
         let playToken = 0;
 
@@ -319,13 +337,20 @@
             if (currentAudio) { currentAudio.pause(); currentAudio = null; }
         }
 
-        // Plays one or more Amharic recordings in order, e.g. playAmharic('Rate', 'Comment')
-        function playAmharic(...names) {
+        // Plays recordings in order, e.g. playVoice('om', 'rate', 'comment').
+        // Returns a Promise that resolves when they finish (or fail).
+        function playVoice(langCode, ...keys) {
             stopAllVoice();
             const token = playToken;
-            return names.reduce((chain, name) => chain.then(() => new Promise(resolve => {
+            const cfg = VOICE[langCode];
+            if (!cfg) return Promise.resolve();
+
+            const urls = keys
+                .filter(key => { if (!cfg.files[key]) console.warn(`No "${key}" recording set for "${langCode}"`); return cfg.files[key]; })
+                .map(key => encodeURI(`${cfg.folder}${cfg.files[key]}.m4a`));   // encodeURI handles file names with spaces
+
+            return urls.reduce((chain, url) => chain.then(() => new Promise(resolve => {
                 if (token !== playToken) return resolve();
-                const url = `${AUDIO_BASE}${name}.m4a`;
                 const audio = new Audio(url);
                 currentAudio = audio;
                 audio.onended = resolve;
@@ -391,6 +416,23 @@
                 alertMismatch: "የጻፉት አስተያየት ከሰጡት የእርካታ ደረጃ ጋር አይጣጣምም! ‼️",
                 successTitle: "እናመሰግናለን! 😊",
                 successDesc: "አስተያየትዎ በጥሩ ሁኔታ ተመዝግቧል ✅"
+            },
+            om: {
+                hdrTitle: "POOLISII FEDERAALAA ITIYOOPHIYAA",
+                hdrSub: "Sirna Yaada Hawaasaa Fudhachuu",
+                mainHeading: "Tajaajila argattaniin hammam gammaddan?",
+                mainDesc: "Maaloo gammachuu keessan agarsiisuuf mallattoo miiraa armaan gadii keessaa tokko filadhaa.",
+                l1: "Baayyee Hin Gammanne", l2: "Hin Gammanne", l3: "Giddu galeessa", l4: "Gammadeera", l5: "Baayyee Gammadeera",
+                lblComment: "Yaada keessan barreessaa (Filannoo):",
+                commentPlaceholder: "Waa'ee tajaajilaa yaada ykn ergaa keessan as irratti barreessaa...",
+                recStatus: "Sagalee galmeessuuf maayikii tuqaa",
+                recActive: "Dhaggeeffachaa jira...",
+                btnBack: "Gara Tajaajiloota Deebi'i",
+                btnSubmit: "Galmeessii & Xumuri",
+                errRating: "Maaloo dura sadarkaa gammachuu keessanii filadhaa!",
+                alertMismatch: "Yaadni barreessitan sadarkaa filattan waliin hin deemu! ‼️",
+                successTitle: "Galatoomaa! 😊",
+                successDesc: "Yaadni keessan sirriitti galmaa'eera ✅"
             }
         };
 
@@ -448,7 +490,7 @@
 
         if (SpeechRecognition) {
             const recognition = new SpeechRecognition();
-            recognition.lang = (lang === 'am') ? 'am-ET' : 'en-US';
+            recognition.lang = { am: 'am-ET', om: 'om-ET', en: 'en-US' }[lang] || 'en-US';   // some browsers do not support Oromo dictation
             recognition.continuous = false;
             recognition.interimResults = true;
 
@@ -512,7 +554,7 @@
             'good', 'great', 'excellent', 'satisfied', 'happy', 'thank', 'wonderful', 'nice', 'awesome'
         ];
 
-        const emojiMap = { '1': '😡', '2': '🙁', '3': '😐', '4': '😊', '5': '😍' };
+        const emojiMap = { '1': '😡1', '2': '2🙁', '3': '3😐', '4': '4😊', '5': '5😍' };
 
         function showAlert(message) {
             document.getElementById('alert-text').textContent = message;
@@ -561,8 +603,8 @@
                     successCard.style.transform = 'scale(1)';
                 }, 50);
 
-                // Amharic: play your "Thanks" recording. Wait for it to finish (min 2.5s, max 8s) before leaving.
-                const thanks = (lang === 'am') ? playAmharic('Thanks') : Promise.resolve();
+                // Amharic / Oromo: play your "Thanks" recording. Wait for it to finish (min 2.5s, max 8s) before leaving.
+                const thanks = (lang === 'am' || lang === 'om') ? playVoice(lang, 'thanks') : Promise.resolve();
                 const minWait = new Promise(resolve => setTimeout(resolve, 2500));
                 const maxWait = new Promise(resolve => setTimeout(resolve, 8000));
                 await Promise.race([Promise.all([thanks, minWait]), maxWait]);

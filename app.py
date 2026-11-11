@@ -306,19 +306,19 @@ def evaluate_comment_safety(comment):
 # outside what the generated file itself can force.
 # ----------------------------------------------------
 RATING_EMOJI_TO_NUMBER = {
-    '😡': '1',
-    '😠': '2',
-    '🙁': '2',
-    '😐': '3',
-    '😊': '4',
-    '😍': '5',
+    '😡1': '1',
+    '😠2': '2',
+    '🙁2': '2',
+    '😐3': '3',
+    '😊4': '4',
+    '😍5': '5',
 }
 RATING_NUMBER_TO_EMOJI = {
-    '1': '😡',
-    '2': '😠',
-    '3': '😐',
-    '4': '😊',
-    '5': '😍',
+    '1': '😡1',
+    '2': '😠2',
+    '3': '😐3',
+    '4': '😊3',
+    '5': '😍5',
 }
 RATING_NUMBER_TO_LABEL = {
     '1': 'Very Dissatisfied',
@@ -630,64 +630,73 @@ def init_db():
 
         default_sub_services = {
             "police_clearance": [
-                ("new_clearance", "New Police Clearance", "አዲስ የፖሊስ ክሊራንስ"),
-                ("renewal", "Renewal", "እድሳት"),
-                ("criminal_record", "Criminal Record Verification", "የወንጀል መዝገብ ማረጋገጫ"),
-                ("fingerprint", "Fingerprint Registration", "የጣት አሻራ ምዝገባ"),
-                ("document_collection", "Document Collection", "ሰነድ መሰብሰብ")
+                ("new_clearance", "New Police Clearance", "አዲስ የፖሊስ ክሊራንስ", "Ragaa qulqullina poolisii haaraa"),
+                ("renewal", "Renewal", "እድሳት", "Haaromsa"),
+                ("criminal_record", "Criminal Record Verification", "የወንጀል መዝገብ ማረጋገጫ", "Mirkaneessa galmee yakkaa"),
+                ("fingerprint", "Fingerprint Registration", "የጣት አሻራ ምዝገባ", "Galmee mallattoo qubaa"),
+                ("document_collection", "Document Collection", "ሰነድ መሰብሰብ", "Sassaabbii sanadootaa")
             ],
+
             "complaint": [
-                ("crime_complaint", "Crime Complaint Registration", "የወንጀል ቅሬታ ምዝገባ"),
-                ("public_office", "Public Complaint Office", "የህዝብ ቅሬታ ቢሮ"),
-                ("online_followup", "Online Complaint Follow-up", "የመስመር ላይ ቅሬታ ክትትል"),
-                ("investigation", "Investigation", "ምርመራ"),
-                ("resolution", "Resolution", "ውሳኔ")
+                ("crime_complaint", "Crime Complaint Registration", "የወንጀል ቅሬታ ምዝገባ", "Galmeessa komii yakkaa"),
+                ("public_office", "Public Complaint Office", "የህዝብ ቅሬታ ቢሮ", "Waajjira komii uummataa"),
+                ("online_followup", "Online Complaint Follow-up", "የመስመር ላይ ቅሬታ ክትትል", "Hordoffii komii toora interneetii"),
+                ("investigation", "Investigation", "ምርመራ", "Qorannoo"),
+                ("resolution", "Resolution", "ውሳኔ", "Furmaata")
             ],
+
             "hospital": [
-                ("opd", "OPD", "የውጪ ህሙማን ክፍል"),
-                ("emergency", "Emergency", "አስቸኳይ ጊዜ"),
-                ("pharmacy", "Pharmacy", "ፋርማሲ"),
-                ("laboratory", "Laboratory", "ላቦራቶሪ"),
-                ("medical_exam", "Medical Examination", "የህክምና ምርመራ")
+                ("opd", "OPD", "የውጪ ህሙማን ክፍል", "Kutaa yaala dhukkubsattoota alaa"),
+                ("emergency", "Emergency", "አስቸኳይ ጊዜ", "Tajaajila yeroo hatattamaa"),
+                ("pharmacy", "Pharmacy", "ፋርማሲ", "Mana qorichaa"),
+                ("laboratory", "Laboratory", "ላቦራቶሪ", "Laaboraatoorii"),
+                ("medical_exam", "Medical Examination", "የህክምና ምርመራ", "Qorannoo fayyaa")
             ],
+
             "logistics": [
-                ("vehicle_mgmt", "Vehicle Management", "የተሽከርካሪ አስተዳደር"),
-                ("garage", "Garage", "ጋራጅ"),
-                ("equipment_dist", "Equipment Distribution", "የቁሳቁስ ክፍፍል"),
-                ("inventory", "Inventory", "ዕቃ ግምጃ ቤት"),
-                ("procurement", "Procurement", "ግዥ")
+                ("vehicle_mgmt", "Vehicle Management", "የተሽከርካሪ አስተዳደር", "Bulchiinsa konkolaataa"),
+                ("garage", "Garage", "ጋራጅ", "Gaarajii"),
+                ("equipment_dist", "Equipment Distribution", "የቁሳቁስ ክፍፍል", "Raabsa meeshaalee"),
+                ("inventory", "Inventory", "ዕቃ ግምጃ ቤት", "Kuusaa meeshaalee"),
+                ("procurement", "Procurement", "ግዥ", "Bittaa")
             ],
+
             "education_training": [
-                ("student_reg", "Student Registration", "የተማሪዎች ምዝገባ"),
-                ("training", "Training", "ስልጠና"),
-                ("certificates", "Certificates", "ሰርተፍኬቶች"),
-                ("examination", "Examination", "ፈተና"),
-                ("academic_records", "Academic Records", "የአካዳሚክ መዛግብት")
+                ("student_reg", "Student Registration", "የተማሪዎች ምዝገባ", "Galmee barattootaa"),
+                ("training", "Training", "ስልጠና", "Leenjii"),
+                ("certificates", "Certificates", "ሰርተፍኬቶች", "Ragaa waraqaa mirkaneessaa"),
+                ("examination", "Examination", "ፈተና", "Qormaata"),
+                ("academic_records", "Academic Records", "የአካዳሚክ መዛግብት", "Galmee barnootaa")
             ],
+
             "hr": [
-                ("recruitment", "Recruitment & Talent Acquisition", "የሰራተኛ ቅጥር እና ተሰጥኦ ማፈላለግ"),
-                ("employee_records", "Employee Records", "የሰራተኛ መዝገቦች"),
-                ("payroll", "Payroll & Benefits", "የደመወዝ እና ጥቅማጥቅሞች"),
-                ("leave", "Leave Management", "የፈቃድ አስተዳደር"),
-                ("training_development", "Staff Development", "የሰራተኛ ልማት")
+                ("recruitment", "Recruitment & Talent Acquisition", "የሰራተኛ ቅጥር እና ተሰጥኦ ማፈላለግ", "Qacarrii fi barbaacha dandeettii hojjettootaa"),
+                ("employee_records", "Employee Records", "የሰራተኛ መዝገቦች", "Galmee hojjettootaa"),
+                ("payroll", "Payroll & Benefits", "የደመወዝ እና ጥቅማጥቅሞች", "Mindaa fi faayidaalee hojjettootaa"),
+                ("leave", "Leave Management", "የፈቃድ አስተዳደር", "Bulchiinsa boqonnaa"),
+                ("training_development", "Staff Development", "የሰራተኛ ልማት", "Misooma hojjettootaa")
             ],
+
             "help_desk": [
-                ("hardware", "Hardware Support", "የሃርድዌር ድጋፍ"),
-                ("network", "Network Support", "የኔትወርክ ድጋፍ"),
-                ("software", "Software Support", "የሶፍትዌር ድጋፍ"),
-                ("account_access", "Account & Access Support", "የመለያ እና የመግቢያ ድጋፍ"),
-                ("technical_issue", "Technical Issue Reporting", "የቴክኒክ ችግር ሪፖርት")
+                ("hardware", "Hardware Support", "የሃርድዌር ድጋፍ", "Deeggarsa meeshaalee kompiitaraa"),
+                ("network", "Network Support", "የኔትወርክ ድጋፍ", "Deeggarsa neetworkii"),
+                ("software", "Software Support", "የሶፍትዌር ድጋፍ", "Deeggarsa sooftiweerii"),
+                ("account_access", "Account & Access Support", "የመለያ እና የመግቢያ ድጋፍ", "Deeggarsa akkaawuntii fi seensaa"),
+                ("technical_issue", "Technical Issue Reporting", "የቴክኒክ ችግር ሪፖርት", "Gabaasa rakkoo teeknikaa")
             ],
+
             "other": [
-                ("reception", "Reception", "እንግዳ መቀበያ"),
-                ("ict_support", "ICT Support", "የአይቲ ድጋፍ"),
-                ("finance", "Finance", "ፋይናንስ"),
-                ("admin", "Administration", "አስተዳደር")
+                ("reception", "Reception", "እንግዳ መቀበያ", "Simannaa keessummootaa"),
+                ("ict_support", "ICT Support", "የአይቲ ድጋፍ", "Deeggarsa ICT"),
+                ("finance", "Finance", "ፋይናንስ", "Faayinaansii"),
+                ("admin", "Administration", "አስተዳደር", "Bulchiinsa")
             ]
         }
 
         for s_key, sub_list in default_sub_services.items():
-            for sub_key, sub_name, amh_name in sub_list:
+            # Each sub-service entry stores: key, English name, Amharic name,
+            # and an additional local-language label (e.g. Afaan Oromo).
+            for sub_key, sub_name, amh_name, _local_name in sub_list:
                 existing = SubService.query.filter_by(service_key=s_key, sub_service_key=sub_key).first()
                 if not existing:
                     ss = SubService()
@@ -1004,8 +1013,8 @@ def build_ai_insights(records):
             'recommendation': 'No feedback records available yet for this scope.'
         }
 
-    positive_ratings = {'😍', '😊', '4', '5'}
-    negative_ratings = {'🙁', '😠', '😡', '1', '2'}
+    positive_ratings = {'😍5', '😊4', '4', '5'}
+    negative_ratings = {'🙁3', '😠2', '😡1', '1', '2'}
 
     positive_count = sum(1 for fb in records if str(fb.rating).strip() in positive_ratings)
     satisfaction_pct = round((positive_count / len(records)) * 100)
@@ -1771,29 +1780,38 @@ def _generate_tts_audio(text, voice, file_path):
 # Add one entry per page/step you want narrated, then call
 # /api/voice-guide/<that_key> from that page's template.
 # ----------------------------------------------------
+
 GUIDE_PHRASES = {
     'fingerprint_intro': {
         'am': 'እንኳን ደህና መጡ ወደ የኢትዮጵያ ፌዴራል ፖሊስ የደንበኞች አስተያየት ስርዓት። እባክዎ የጣት አሻራዎን በስክሪኑ ላይ ያድርጉ።',
-        'en': 'Welcome to the Ethiopian Federal Police Feedback System. Please place your finger on the sensor to begin.'
+        'en': 'Welcome to the Ethiopian Federal Police Feedback System. Please place your finger on the sensor to begin.',
+        'om': 'Baga gara Sirna Yaada Maamiltoota Poolisii Federaalaa Itoophiyaa dhuftan. Itti fufuun dura, maaloo quba keessan meeshaa adda baastuu qubaa irratti kaa’aa.'
     },
+
     'welcome_language': {
         'am': 'እባክዎ የሚፈልጉትን ቋንቋ ይምረጡ፣ አማርኛ ወይም እንግሊዝኛ።',
-        'en': 'Please select your preferred language, Amharic or English.'
+        'en': 'Please select your preferred language, Amharic or English.',
+        'om': 'Maaloo afaan filattan filadhaa: Afaan Oromoo, Afaan Amaaraa ykn Afaan Ingiliffaa.'
     },
+
     'services_intro': {
         'am': 'እባክዎ አስተያየት መስጠት የሚፈልጉበትን አገልግሎት ይምረጡ።',
-        'en': 'Please select the service you would like to give feedback about.'
+        'en': 'Please select the service you would like to give feedback about.',
+        'om': 'Maaloo tajaajila irratti yaada kennuu barbaaddan filadhaa.'
     },
+
     'feedback_intro': {
         'am': 'እባክዎ ደረጃዎን ይምረጡ እና አስተያየትዎን ይተይቡ ወይም በድምጽ ይቅዱ።',
-        'en': 'Please choose your rating, then type or record your feedback.'
+        'en': 'Please choose your rating, then type or record your feedback.',
+        'om': 'Maaloo sadarkaa tajaajilaa filadhaa, achiis yaada keessan barreessaa ykn sagaleedhaan waraabaa.'
     },
+
     'thank_you': {
         'am': 'አገልግሎቱን ስለተጠቀሙ እናመሰግናለን!',
-        'en': 'Thank you for using our service!'
-    },
+        'en': 'Thank you for using our service!',
+        'om': 'Tajaajila keenya fayyadamuu keessaniif galatoomaa!'
+    }
 }
-
 
 @app.route('/api/voice-guide/<page_key>')
 def voice_guide(page_key):

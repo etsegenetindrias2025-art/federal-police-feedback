@@ -157,8 +157,8 @@
             letter-spacing: 0.5px;
         }
 
-        .lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-        @media (max-width: 540px) { .lang-grid { grid-template-columns: 1fr; } }
+        .lang-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+        @media (max-width: 640px) { .lang-grid { grid-template-columns: 1fr; } }
 
         .lang-card {
             background: var(--lang-card-bg);
@@ -260,6 +260,11 @@
                     <span class="main-lbl">አማርኛ</span>
                     <span class="sub-lbl">Amharic</span>
                 </a>
+
+                <a href="{{ url_for('services', lang='om') }}" class="lang-card">
+                    <span class="main-lbl">Afaan Oromoo</span>
+                    <span class="sub-lbl">Afan Oromo</span>
+                </a>
             </div>
         </div>
 
@@ -268,8 +273,10 @@
             <div class="voice-buttons">
                 <!-- English: AI voice -->
                 <button onclick="playEnglish('Welcome to the Ethiopian Federal Police Customer Satisfaction Monitoring System. Thank you for sharing your feedback. Please select your preferred language.')" class="voice-btn" type="button">🔊 English</button>
-                <!-- Amharic: your recordings (Welcome, then Language) -->
-                <button onclick="playAmharic('Welcome', 'Language')" class="voice-btn" type="button">🔊 አማርኛ</button>
+                <!-- Amharic: your recording (Language) -->
+                <button onclick="playVoice('am', 'language')" class="voice-btn" type="button">🔊 አማርኛ</button>
+                <!-- Afan Oromo: your recording (Kuankua) -->
+                <button onclick="playVoice('om', 'language')" class="voice-btn" type="button">🔊 Afaan Oromoo</button>
             </div>
         </div>
 
@@ -282,10 +289,24 @@
     <script>
         /* ------------------------------------------------------------
            VOICE GUIDE  (built into this page, no extra file needed)
-           - Amharic : your own recordings in static/audio/Am/*.m4a
-           - English : browser AI voice (speechSynthesis)
+           - Amharic    : your recordings in static/audio/Am/
+           - Afan Oromo : your recordings in static/audio/afan.or/
+           - English    : browser AI voice (speechSynthesis)
+
+           To change a recording, only edit the file names below
+           (write the name without ".m4a").
         ------------------------------------------------------------ */
-        const AUDIO_BASE = '/static/audio/Am/';   // keep the capital "A" in "Am"
+        const VOICE = {
+            am: {
+                folder: '/static/audio/Am/',
+                files: { finger: 'Finger am', language: 'Language', service: 'Service-1', rate: 'Rate', comment: 'Comment', thanks: 'Thanks-1' }
+            },
+            om: {
+                folder: '/static/audio/afan.or/',
+                files: { finger: 'Fingure', language: 'Kuankua', service: 'Service or', comment: 'Comment or', thanks: 'Th-1' }   // no "rate" recording yet
+            }
+        };
+
         let currentAudio = null;
         let playToken = 0;
 
@@ -295,13 +316,20 @@
             if (currentAudio) { currentAudio.pause(); currentAudio = null; }
         }
 
-        // Plays one or more Amharic recordings in order, e.g. playAmharic('Rate', 'Comment')
-        function playAmharic(...names) {
+        // Plays recordings in order, e.g. playVoice('om', 'rate', 'comment').
+        // Returns a Promise that resolves when they finish (or fail).
+        function playVoice(langCode, ...keys) {
             stopAllVoice();
             const token = playToken;
-            return names.reduce((chain, name) => chain.then(() => new Promise(resolve => {
+            const cfg = VOICE[langCode];
+            if (!cfg) return Promise.resolve();
+
+            const urls = keys
+                .filter(key => { if (!cfg.files[key]) console.warn(`No "${key}" recording set for "${langCode}"`); return cfg.files[key]; })
+                .map(key => encodeURI(`${cfg.folder}${cfg.files[key]}.m4a`));   // encodeURI handles file names with spaces
+
+            return urls.reduce((chain, url) => chain.then(() => new Promise(resolve => {
                 if (token !== playToken) return resolve();
-                const url = `${AUDIO_BASE}${name}.m4a`;
                 const audio = new Audio(url);
                 currentAudio = audio;
                 audio.onended = resolve;

@@ -166,8 +166,10 @@
             <div class="flex flex-wrap items-center justify-center gap-2">
                 <!-- English: AI voice -->
                 <button onclick="playEnglish('Select the service you received: Police Clearance, Complaint, Hospital, Logistics, Education and Training, or Other Services.')" class="voice-btn">🔊 <span data-i18n="englishGuide">የእንግሊዝኛ መመሪያ</span></button>
-                <!-- Amharic: your recording (static/audio/Am/Service.m4a) -->
-                <button onclick="playAmharic('Service')" class="voice-btn">🔊 <span data-i18n="amharicGuide">አማርኛ መመሪያ</span></button>
+                <!-- Amharic: your recording (Service-1) -->
+                <button onclick="playVoice('am', 'service')" class="voice-btn">🔊 <span data-i18n="amharicGuide">አማርኛ መመሪያ</span></button>
+                <!-- Afan Oromo: your recording (Service or) -->
+                <button onclick="playVoice('om', 'service')" class="voice-btn">🔊 <span data-i18n="oromoGuide">የኦሮምኛ መመሪያ</span></button>
             </div>
         </div>
     </div>
@@ -187,10 +189,24 @@
     <script>
         /* ------------------------------------------------------------
            VOICE GUIDE  (built into this page, no extra file needed)
-           - Amharic : your own recordings in static/audio/Am/*.m4a
-           - English : browser AI voice (speechSynthesis)
+           - Amharic    : your recordings in static/audio/Am/
+           - Afan Oromo : your recordings in static/audio/afan.or/
+           - English    : browser AI voice (speechSynthesis)
+
+           To change a recording, only edit the file names below
+           (write the name without ".m4a").
         ------------------------------------------------------------ */
-        const AUDIO_BASE = '/static/audio/Am/';   // keep the capital "A" in "Am"
+        const VOICE = {
+            am: {
+                folder: '/static/audio/Am/',
+                files: { finger: 'Finger am', language: 'Language', service: 'Service-1', rate: 'Rate', comment: 'Comment', thanks: 'Thanks-1' }
+            },
+            om: {
+                folder: '/static/audio/afan.or/',
+                files: { finger: 'Fingure', language: 'Kuankua', service: 'Service or', comment: 'Comment or', thanks: 'Th-1' }   // no "rate" recording yet
+            }
+        };
+
         let currentAudio = null;
         let playToken = 0;
 
@@ -200,13 +216,20 @@
             if (currentAudio) { currentAudio.pause(); currentAudio = null; }
         }
 
-        // Plays one or more Amharic recordings in order, e.g. playAmharic('Rate', 'Comment')
-        function playAmharic(...names) {
+        // Plays recordings in order, e.g. playVoice('om', 'rate', 'comment').
+        // Returns a Promise that resolves when they finish (or fail).
+        function playVoice(langCode, ...keys) {
             stopAllVoice();
             const token = playToken;
-            return names.reduce((chain, name) => chain.then(() => new Promise(resolve => {
+            const cfg = VOICE[langCode];
+            if (!cfg) return Promise.resolve();
+
+            const urls = keys
+                .filter(key => { if (!cfg.files[key]) console.warn(`No "${key}" recording set for "${langCode}"`); return cfg.files[key]; })
+                .map(key => encodeURI(`${cfg.folder}${cfg.files[key]}.m4a`));   // encodeURI handles file names with spaces
+
+            return urls.reduce((chain, url) => chain.then(() => new Promise(resolve => {
                 if (token !== playToken) return resolve();
-                const url = `${AUDIO_BASE}${name}.m4a`;
                 const audio = new Audio(url);
                 currentAudio = audio;
                 audio.onended = resolve;
@@ -234,7 +257,8 @@
         let departmentsData = {};
         const HIDDEN_CATEGORIES = ['additional_request'];   // used by the "unlisted request" box, not a real category
         const urlParams = new URLSearchParams(window.location.search);
-        const currentLang = (urlParams.get('lang') === 'en') ? 'en' : 'am';
+        const requestedLang = urlParams.get('lang');
+        const currentLang = ['am', 'en', 'om'].includes(requestedLang) ? requestedLang : 'am';   // Amharic is the default
 
         const I18N = {
             am: {
@@ -256,6 +280,7 @@
                 audioAssistance: 'የድምጽ እርዳታ',
                 englishGuide: 'የእንግሊዝኛ መመሪያ',
                 amharicGuide: 'አማርኛ መመሪያ',
+                oromoGuide: 'የኦሮምኛ መመሪያ',
                 back: 'ተመለስ',
                 footer: 'የፌዴራል ፖሊስ ኪዮስክ v4.5',
                 darkMode: 'ጨለማ ሁነታ',
@@ -283,6 +308,7 @@
                 audioAssistance: 'AUDIO ASSISTANCE',
                 englishGuide: 'English Guide',
                 amharicGuide: 'Amharic Guide',
+                oromoGuide: 'Afan Oromo Guide',
                 back: 'Back',
                 footer: 'Federal Police Kiosk v4.5',
                 darkMode: 'Dark Mode',
@@ -290,6 +316,34 @@
                 offlineTitle: 'You are offline or the endpoint is unavailable.',
                 offlineDesc: 'Please check your network connection or service worker setup.',
                 noRecords: 'No records found in database tables.'
+            },
+            om: {
+                orgName: "Poolisii Federaalaa Itiyoophiyaa",
+                subtitle: "Tajaajilli keenya har'a akkam ture?",
+                chooseCategory: "Maaloo gosa tajaajilaa filadhaa",
+                loading: "Odeeffannoon fe'amaa jira...",
+                unlistedTitle: "Tajaajila barbaaddan hin arganne?",
+                unlistedDesc: "Tajaajila barbaaddan tarreeffama armaan olii keessatti yoo hin arganne, maaloo tajaajila ykn gaaffii barbaaddan as irratti barreessaa.",
+                unlistedPlaceholder: "Maaloo tajaajila ykn gaaffii barbaaddan as irratti barreessaa...",
+                submitRequest: "Gaaffii Ergi",
+                successMsg: "Ergaan keessan ergameera! Tajaajila keenya fayyadamuu keessaniif galatoomaa.",
+                toastMsg: "Gaaffiin keessan milkaa'inaan ergameera!",
+                emptyMsg: "Maaloo dura gaaffii ykn tajaajila barbaaddan barreessaa.",
+                errorMsg: "Dogoggorri uumameera.",
+                backToCategories: "Gara Gosootaatti Deebi'i",
+                subServices: "Tajaajiloota Xixiqqaa",
+                clickToProceed: "Sadarkaa kennuuf tuqaa",
+                audioAssistance: "GARGAARSA SAGALEE",
+                englishGuide: "Qajeelfama Afaan Ingiliffaa",
+                amharicGuide: "Qajeelfama Afaan Amaaraa",
+                oromoGuide: "Qajeelfama Afaan Oromoo",
+                back: "Deebi'i",
+                footer: "Kiyoosiikii Poolisii Federaalaa v4.5",
+                darkMode: "Haalata Dukkanaa",
+                lightMode: "Haalata Ifaa",
+                offlineTitle: "Toora interneetii irraa citteetta ykn tajaajilichi hin argamu.",
+                offlineDesc: "Maaloo hidhata interneetii keessan mirkaneessaa.",
+                noRecords: "Kuusaa daataa keessatti galmeen tokkollee hin argamne."
             }
         };
 
