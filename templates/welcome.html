@@ -272,7 +272,7 @@
             <p class="voice-title">Audio Assistance / የድምጽ እርዳታ</p>
             <div class="voice-buttons">
                 <!-- English: AI voice -->
-                <button onclick="playEnglish('Welcome to the Ethiopian Federal Police Customer Satisfaction Monitoring System. Thank you for sharing your feedback. Please select your preferred language.')" class="voice-btn" type="button">🔊 English</button>
+                <button onclick="playEnglish('Please select your preferred language.')" class="voice-btn" type="button">🔊 English</button>
                 <!-- Amharic: your recording (Language) -->
                 <button onclick="playVoice('am', 'language')" class="voice-btn" type="button">🔊 አማርኛ</button>
                 <!-- Afan Oromo: your recording (Kuankua) -->
@@ -294,63 +294,111 @@
            - English    : browser AI voice (speechSynthesis)
 
            To change a recording, only edit the file names below
-           (write the name without ".m4a").
+           (write the name without ".m4a"). A list like ['Service-or', 'Service or']
+           means: try the first name, and if it is not found try the next one.
         ------------------------------------------------------------ */
+        const VOICE_DEBUG = true;   // shows a red message on screen when a recording cannot be played. Set to false when everything works.
+
         const VOICE = {
             am: {
                 folder: '/static/audio/Am/',
-                files: { finger: 'Finger am', language: 'Language', service: 'Service-1', rate: 'Rate', comment: 'Comment', thanks: 'Thanks-1' }
+                files: { finger: ['Finger-am', 'Finger am'], language: 'Language', service: 'Service-1', rate: 'Rate', comment: 'Comment', thanks: 'Thanks-1' }
             },
             om: {
                 folder: '/static/audio/afan.or/',
-                files: { finger: 'Fingure', language: 'Kuankua', service: 'Service or', comment: 'Comment or', thanks: 'Th-1' }   // no "rate" recording yet
+                files: { finger: 'Fingure', language: 'Kuankua', service: ['Service-or', 'Service or'], rate: ['Rate-or', 'Rate or'], comment: ['Comment-or', 'Comment or'], thanks: 'Th-1' }
             }
         };
 
         let currentAudio = null;
+        let currentResolve = null;
         let playToken = 0;
+        let audioBlocked = false;   // becomes true if the browser refuses to play sound before the first touch
+
+        function voiceDebug(message) {
+            console.error(message);
+            if (!VOICE_DEBUG) return;
+            let box = document.getElementById('voice-debug');
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'voice-debug';
+                box.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:#7f1d1d;color:#fff;padding:10px 14px;border-radius:10px;font:12px/1.4 monospace;word-break:break-all';
+                document.body.appendChild(box);
+            }
+            box.textContent = message;
+            clearTimeout(box._timer);
+            box._timer = setTimeout(() => box.remove(), 7000);
+        }
 
         function stopAllVoice() {
             playToken++;
             if ('speechSynthesis' in window) window.speechSynthesis.cancel();
             if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+            if (currentResolve) { const done = currentResolve; currentResolve = null; done(); }
         }
 
-        // Plays recordings in order, e.g. playVoice('om', 'rate', 'comment').
-        // Returns a Promise that resolves when they finish (or fail).
-        function playVoice(langCode, ...keys) {
+        // Plays one file. Resolves true if it played (or was cancelled / blocked), false if the file could not be loaded.
+        function playUrl(url, token) {
+            return new Promise(resolve => {
+                if (token !== playToken) return resolve(true);
+                const audio = new Audio(url);
+                currentAudio = audio;
+                currentResolve = () => resolve(true);
+                audio.onended = () => resolve(true);
+                audio.onerror = () => resolve(false);
+                audio.play().catch(err => {
+                    if (err && err.name === 'NotAllowedError') { audioBlocked = true; resolve(true); }
+                    else resolve(false);
+                });
+            });
+        }
+
+        async function playFile(cfg, candidates, token) {
+            const names = Array.isArray(candidates) ? candidates : [candidates];
+            const tried = [];
+            for (const name of names) {
+                const url = encodeURI(`${cfg.folder}${name}.m4a`);   // encodeURI handles file names with spaces
+                tried.push(url);
+                if (await playUrl(url, token)) return;
+            }
+            if (token === playToken) voiceDebug('Audio file not found: ' + tried.join('   or   '));
+        }
+
+        // Plays recordings in order, e.g. playVoice('om', 'rate', 'comment')
+        async function playVoice(langCode, ...keys) {
             stopAllVoice();
             const token = playToken;
             const cfg = VOICE[langCode];
-            if (!cfg) return Promise.resolve();
-
-            const urls = keys
-                .filter(key => { if (!cfg.files[key]) console.warn(`No "${key}" recording set for "${langCode}"`); return cfg.files[key]; })
-                .map(key => encodeURI(`${cfg.folder}${cfg.files[key]}.m4a`));   // encodeURI handles file names with spaces
-
-            return urls.reduce((chain, url) => chain.then(() => new Promise(resolve => {
-                if (token !== playToken) return resolve();
-                const audio = new Audio(url);
-                currentAudio = audio;
-                audio.onended = resolve;
-                audio.onerror = () => { console.error('Audio file not found or cannot be played:', url); resolve(); };
-                audio.play().catch(err => { console.error('Audio play blocked:', url, err); resolve(); });
-            })), Promise.resolve());
+            if (!cfg) return;
+            for (const key of keys) {
+                if (token !== playToken) return;
+                if (!cfg.files[key]) { console.warn(`No "${key}" recording set for "${langCode}"`); continue; }
+                await playFile(cfg, cfg.files[key], token);
+            }
         }
 
+        // English AI voice. Returns a Promise that resolves when the speech has finished.
         function playEnglish(text) {
-            if (!('speechSynthesis' in window)) {
-                console.error('This browser has no speechSynthesis (text-to-speech).');
-                return;
-            }
-            stopAllVoice();
-            // small delay: some browsers drop speak() when it comes right after cancel()
-            setTimeout(() => {
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'en-US';
-                utterance.rate = 0.92;
-                window.speechSynthesis.speak(utterance);
-            }, 150);
+            return new Promise(resolve => {
+                if (!('speechSynthesis' in window)) {
+                    voiceDebug('This browser has no text-to-speech.');
+                    return resolve();
+                }
+                stopAllVoice();
+                const token = playToken;
+                // small delay: some browsers drop speak() when it comes right after cancel()
+                setTimeout(() => {
+                    if (token !== playToken) return resolve();
+                    const timer = setTimeout(resolve, Math.max(6000, text.length * 120));   // safety net
+                    const finish = () => { clearTimeout(timer); resolve(); };
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = 'en-US';
+                    utterance.rate = 0.92;
+                    utterance.onend = finish;
+                    utterance.onerror = (e) => { if (e.error === 'not-allowed') audioBlocked = true; finish(); };
+                    window.speechSynthesis.speak(utterance);
+                }, 150);
+            });
         }
     </script>
     <script>

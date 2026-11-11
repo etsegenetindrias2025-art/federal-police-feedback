@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome for Fingerprint Icon -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
+
     <style>
         * {
             box-sizing: border-box;
@@ -65,11 +65,7 @@
             filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.9));
         }
 
-        .header-text {
-            display: flex;
-            flex-direction: column;
-            text-align: left;
-        }
+        .header-text { display: flex; flex-direction: column; text-align: left; }
 
         .header-title {
             color: #d97706;
@@ -116,19 +112,9 @@
             justify-content: space-between;
         }
 
-        .card-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #ffffff;
-            margin-bottom: 12px;
-        }
+        .card-title { font-size: 1.5rem; font-weight: 700; color: #ffffff; margin-bottom: 12px; }
 
-        .card-subtitle {
-            color: #94a3b8;
-            font-size: 0.88rem;
-            line-height: 1.5;
-            margin-bottom: 30px;
-        }
+        .card-subtitle { color: #94a3b8; font-size: 0.88rem; line-height: 1.5; margin-bottom: 30px; }
 
         /* Scanner Pad Box */
         .scanner-box {
@@ -197,10 +183,7 @@
             width: 100%;
         }
 
-        .sensor-btn:hover {
-            background: rgba(30, 41, 59, 0.8);
-            color: #ffffff;
-        }
+        .sensor-btn:hover { background: rgba(30, 41, 59, 0.8); color: #ffffff; }
 
         /* QR Card Styles */
         .qr-image-wrapper {
@@ -212,30 +195,38 @@
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
         }
 
-        .qr-code-img {
-            width: 150px;
-            height: 150px;
-            object-fit: contain;
-            display: block;
+        .qr-code-img { width: 150px; height: 150px; object-fit: contain; display: block; }
+
+        .qr-footer-text { color: #38bdf8; font-size: 0.78rem; font-weight: 500; margin-top: 10px; }
+
+        /* Voice buttons (replay the welcome message) */
+        .voice-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 26px;
+            z-index: 2;
         }
 
-        .qr-footer-text {
-            color: #38bdf8;
-            font-size: 0.78rem;
-            font-weight: 500;
-            margin-top: 10px;
+        .voice-btn {
+            background: rgba(10, 15, 28, 0.75);
+            border: 1px solid rgba(217, 119, 6, 0.45);
+            color: #fbbf24;
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
         }
+
+        .voice-btn:hover { background: rgba(217, 119, 6, 0.25); transform: translateY(-2px); }
 
         /* Responsive Breakpoint for Mobile */
         @media (max-width: 768px) {
-            .main-container {
-                flex-direction: column;
-                align-items: center;
-            }
-            .auth-card {
-                width: 100%;
-                max-width: 440px;
-            }
+            .main-container { flex-direction: column; align-items: center; }
+            .auth-card { width: 100%; max-width: 440px; }
         }
     </style>
 </head>
@@ -252,7 +243,7 @@
 
     <!-- Main Side-by-Side Container -->
     <div class="main-container">
-        
+
         <!-- Left Card: Biometric Authentication -->
         <div class="auth-card">
             <div>
@@ -289,7 +280,165 @@
 
     </div>
 
+    <!-- Welcome voice: plays automatically (English, Amharic, Afan Oromo). These buttons play it again. -->
+    <div class="voice-bar">
+        <button type="button" class="voice-btn" onclick="playEnglish(WELCOME_EN)">🔊 English</button>
+        <button type="button" class="voice-btn" onclick="playVoice('am', 'finger')">🔊 አማርኛ</button>
+        <button type="button" class="voice-btn" onclick="playVoice('om', 'finger')">🔊 Afaan Oromoo</button>
+    </div>
+
     <script>
+        /* ------------------------------------------------------------
+           VOICE GUIDE  (built into this page, no extra file needed)
+           - Amharic    : your recordings in static/audio/Am/
+           - Afan Oromo : your recordings in static/audio/afan.or/
+           - English    : browser AI voice (speechSynthesis)
+
+           To change a recording, only edit the file names below
+           (write the name without ".m4a"). A list like ['Service-or', 'Service or']
+           means: try the first name, and if it is not found try the next one.
+        ------------------------------------------------------------ */
+        const VOICE_DEBUG = true;   // shows a red message on screen when a recording cannot be played. Set to false when everything works.
+
+        const VOICE = {
+            am: {
+                folder: '/static/audio/Am/',
+                files: { finger: ['Finger-am', 'Finger am'], language: 'Language', service: 'Service-1', rate: 'Rate', comment: 'Comment', thanks: 'Thanks-1' }
+            },
+            om: {
+                folder: '/static/audio/afan.or/',
+                files: { finger: 'Fingure', language: 'Kuankua', service: ['Service-or', 'Service or'], rate: ['Rate-or', 'Rate or'], comment: ['Comment-or', 'Comment or'], thanks: 'Th-1' }
+            }
+        };
+
+        let currentAudio = null;
+        let currentResolve = null;
+        let playToken = 0;
+        let audioBlocked = false;   // becomes true if the browser refuses to play sound before the first touch
+
+        function voiceDebug(message) {
+            console.error(message);
+            if (!VOICE_DEBUG) return;
+            let box = document.getElementById('voice-debug');
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'voice-debug';
+                box.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:#7f1d1d;color:#fff;padding:10px 14px;border-radius:10px;font:12px/1.4 monospace;word-break:break-all';
+                document.body.appendChild(box);
+            }
+            box.textContent = message;
+            clearTimeout(box._timer);
+            box._timer = setTimeout(() => box.remove(), 7000);
+        }
+
+        function stopAllVoice() {
+            playToken++;
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+            if (currentResolve) { const done = currentResolve; currentResolve = null; done(); }
+        }
+
+        // Plays one file. Resolves true if it played (or was cancelled / blocked), false if the file could not be loaded.
+        function playUrl(url, token) {
+            return new Promise(resolve => {
+                if (token !== playToken) return resolve(true);
+                const audio = new Audio(url);
+                currentAudio = audio;
+                currentResolve = () => resolve(true);
+                audio.onended = () => resolve(true);
+                audio.onerror = () => resolve(false);
+                audio.play().catch(err => {
+                    if (err && err.name === 'NotAllowedError') { audioBlocked = true; resolve(true); }
+                    else resolve(false);
+                });
+            });
+        }
+
+        async function playFile(cfg, candidates, token) {
+            const names = Array.isArray(candidates) ? candidates : [candidates];
+            const tried = [];
+            for (const name of names) {
+                const url = encodeURI(`${cfg.folder}${name}.m4a`);   // encodeURI handles file names with spaces
+                tried.push(url);
+                if (await playUrl(url, token)) return;
+            }
+            if (token === playToken) voiceDebug('Audio file not found: ' + tried.join('   or   '));
+        }
+
+        // Plays recordings in order, e.g. playVoice('om', 'rate', 'comment')
+        async function playVoice(langCode, ...keys) {
+            stopAllVoice();
+            const token = playToken;
+            const cfg = VOICE[langCode];
+            if (!cfg) return;
+            for (const key of keys) {
+                if (token !== playToken) return;
+                if (!cfg.files[key]) { console.warn(`No "${key}" recording set for "${langCode}"`); continue; }
+                await playFile(cfg, cfg.files[key], token);
+            }
+        }
+
+        // English AI voice. Returns a Promise that resolves when the speech has finished.
+        function playEnglish(text) {
+            return new Promise(resolve => {
+                if (!('speechSynthesis' in window)) {
+                    voiceDebug('This browser has no text-to-speech.');
+                    return resolve();
+                }
+                stopAllVoice();
+                const token = playToken;
+                // small delay: some browsers drop speak() when it comes right after cancel()
+                setTimeout(() => {
+                    if (token !== playToken) return resolve();
+                    const timer = setTimeout(resolve, Math.max(6000, text.length * 120));   // safety net
+                    const finish = () => { clearTimeout(timer); resolve(); };
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = 'en-US';
+                    utterance.rate = 0.92;
+                    utterance.onend = finish;
+                    utterance.onerror = (e) => { if (e.error === 'not-allowed') audioBlocked = true; finish(); };
+                    window.speechSynthesis.speak(utterance);
+                }, 150);
+            });
+        }
+    </script>
+
+    <script>
+        /* ------------------------------------------------------------
+           AUTOMATIC WELCOME VOICE
+           English (AI voice) -> Amharic (Finger am) -> Afan Oromo (Fingure)
+        ------------------------------------------------------------ */
+        const WELCOME_EN = 'Welcome to the Ethiopian Federal Police Customer Satisfaction Monitoring System. Thank you for sharing your feedback. Please place your finger on the scanner pad, or scan the QR code with your phone.';
+
+        async function playWelcomeAll() {
+            audioBlocked = false;
+            await playEnglish(WELCOME_EN);
+            if (audioBlocked) return false;
+            await playVoice('am', 'finger');
+            if (audioBlocked) return false;
+            await playVoice('om', 'finger');
+            return !audioBlocked;
+        }
+
+        // Browsers may block sound until the first touch. If that happens, start the welcome on the first touch
+        // (a touch on the scanner or on the voice buttons does not count).
+        function armFirstTouch() {
+            const handler = (e) => {
+                if (e.target.closest('#scannerBox, .sensor-btn, .voice-bar')) return;
+                document.removeEventListener('pointerdown', handler);
+                playWelcomeAll();
+            };
+            document.addEventListener('pointerdown', handler);
+        }
+
+        window.addEventListener('load', async () => {
+            const played = await playWelcomeAll();
+            if (!played) armFirstTouch();
+        });
+
+        /* ------------------------------------------------------------
+           FINGERPRINT LOGIC (unchanged)
+        ------------------------------------------------------------ */
         function b64urlToBuf(s) {
             const p = '='.repeat((4 - s.length % 4) % 4);
             const raw = atob((s + p).replace(/-/g, '+').replace(/_/g, '/'));
@@ -303,13 +452,8 @@
             return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
         }
 
-        // Tries to recognize a fingerprint that's already enrolled on this
-        // kiosk. Only succeeds if the physical finger on the sensor matches
-        // one of the credential ids the platform authenticator was given
-        // via allowCredentials -- so a "success" here means a returning
-        // citizen, not a new one. Returns the /api/fingerprint/authenticate
-        // response on success, or null if nothing matched (new person, or
-        // nothing enrolled yet).
+        // Tries to recognize a fingerprint that's already enrolled on this kiosk.
+        // Returns the /api/fingerprint/authenticate response on success, or null if nothing matched.
         async function tryAuthenticate(chal) {
             if (!chal.knownCredentialIds || chal.knownCredentialIds.length === 0) {
                 return null;
@@ -339,14 +483,12 @@
                 const result = await res.json();
                 return result.status === 'success' ? result : null;
             } catch (err) {
-                // No matching credential for this finger (or the user
-                // cancelled) -- treat as "new person", not an error.
+                // No matching credential for this finger (or the user cancelled) -- treat as "new person".
                 return null;
             }
         }
 
-        // Enrolls a brand-new fingerprint. Only reached when tryAuthenticate()
-        // above found no match, i.e. this kiosk hasn't seen this finger before.
+        // Enrolls a brand-new fingerprint (only when tryAuthenticate() found no match).
         async function registerFingerprint(chal) {
             const credential = await navigator.credentials.create({
                 publicKey: {
@@ -377,6 +519,7 @@
         }
 
         async function scanFingerprint() {
+            stopAllVoice();   // stop the welcome voice while scanning
             const scannerBox = document.getElementById('scannerBox');
             scannerBox.classList.add('scanning');
             try {
@@ -386,13 +529,11 @@
                     return;
                 }
 
-                // Step 1: get a challenge + the fingerprints already
-                // enrolled on this kiosk, and try to recognize this finger.
+                // Step 1: get a challenge + the fingerprints already enrolled on this kiosk, and try to recognize this finger.
                 let chal = await (await fetch('/api/fingerprint/challenge')).json();
                 let result = await tryAuthenticate(chal);
 
-                // Step 2: no match -- this is a new person. The challenge
-                // was one-time-use, so fetch a fresh one before registering.
+                // Step 2: no match -- this is a new person. The challenge was one-time-use, so fetch a fresh one.
                 if (!result) {
                     chal = await (await fetch('/api/fingerprint/challenge')).json();
                     result = await registerFingerprint(chal);
@@ -404,9 +545,7 @@
                 }
 
                 if (result.alreadySubmittedToday) {
-                    // Recognized, but this finger has already given feedback
-                    // today -- send them to the "come back tomorrow" screen
-                    // instead of into the feedback flow.
+                    // Recognized, but this finger has already given feedback today.
                     window.location.href = '/thank-you?message=limit';
                     return;
                 }
